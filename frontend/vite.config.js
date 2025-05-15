@@ -1,7 +1,12 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+// vite.config.js
+import { defineConfig } from 'vite'; // Import defineConfig
+import react from '@vitejs/plugin-react'; // Import React plugin (assuming you use it)
 
-// https://vite.dev/config/
+// https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
-})
+  plugins: [react()], // Use the React plugin
+  base: '/myclinic-backend/',
+  build: {
+    outDir: 'dist' // Default output directory for Vite
+  }
+});
