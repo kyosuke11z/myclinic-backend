@@ -1,18 +1,9 @@
 import React from 'react';
-import { BrowserRouter as Router } from 'react-router-dom';
+// BrowserRouter ถูกจัดการใน main.jsx แล้ว ไม่จำเป็นต้อง import หรือใช้ที่นี่
 import { AuthProvider } from './contexts/AuthContext';
 import AppRoutes from './routes/AppRoutes';
 import { createTheme, ThemeProvider, CssBaseline } from '@mui/material';
 // import './index.css'; // Global styles, ตรวจสอบว่า import ที่ main.jsx แล้ว
-
-// Script to handle SPA routing on GitHub Pages after 404 redirect
-(function () {
-  const redirect = sessionStorage.redirect;
-  delete sessionStorage.redirect;
-  if (redirect && redirect !== window.location.href) {
-    window.history.replaceState(null, null, redirect);
-  }
-})();
 // กำหนด Theme ที่ไม่ซ้ำใคร
 const uniqueTheme = createTheme({
   palette: {
@@ -47,16 +38,13 @@ const uniqueTheme = createTheme({
 
 function App() {
   return (
-    <Router> {/* <Router> needs to be the outermost wrapper */}
-      
-
-      <ThemeProvider theme={uniqueTheme}> {/* Wrap with ThemeProvider */}
-        <CssBaseline /> {/* Apply CSS resets and theme background */}
-        <AuthProvider> {/* AuthProvider is inside ThemeProvider */}
-          <AppRoutes />
-        </AuthProvider>
-      </ThemeProvider>
-    </Router>
+    // <Router> ถูกลบออกไป เพราะ BrowserRouter หลักอยู่ที่ main.jsx
+    <ThemeProvider theme={uniqueTheme}> {/* Wrap with ThemeProvider */}
+      <CssBaseline /> {/* Apply CSS resets and theme background */}
+      <AuthProvider> {/* AuthProvider is inside ThemeProvider */}
+        <AppRoutes />
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 
