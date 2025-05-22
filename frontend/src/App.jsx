@@ -5,6 +5,14 @@ import AppRoutes from './routes/AppRoutes';
 import { createTheme, ThemeProvider, CssBaseline } from '@mui/material';
 // import './index.css'; // Global styles, ตรวจสอบว่า import ที่ main.jsx แล้ว
 
+// Script to handle SPA routing on GitHub Pages after 404 redirect
+(function () {
+  const redirect = sessionStorage.redirect;
+  delete sessionStorage.redirect;
+  if (redirect && redirect !== window.location.href) {
+    window.history.replaceState(null, null, redirect);
+  }
+})();
 // กำหนด Theme ที่ไม่ซ้ำใคร
 const uniqueTheme = createTheme({
   palette: {
