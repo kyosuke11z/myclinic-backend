@@ -7,6 +7,6 @@ export default defineConfig({
   plugins: [react()], // Use the React plugin
   base: '/myclinic-backend/',
   build: {
-    outDir: 'dist' // Default output directory for Vite
+    outDir: '../docs' // Changed output directory
   }
 });

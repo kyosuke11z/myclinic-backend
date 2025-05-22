@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Redirecting...</title>
+    <script>
+      // redirect กลับไปหน้า index.html แล้วให้ router บน frontend handle เอง
+      const redirectTo = window.location.pathname
+        .replace(/^\/myclinic-backend/, ''); // ตัด prefix repo name
+      window.location.href = `/myclinic-backend/?redirect=${redirectTo}`;
+    </script>
+  </head>
+  <body>
+    <p>Redirecting...</p>
+  </body>
+</html>
