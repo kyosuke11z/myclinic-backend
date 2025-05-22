@@ -1,16 +1,18 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <meta charset="UTF-8" />
-    <title>Redirecting...</title>
-    <script>
-      // redirect กลับไปหน้า index.html แล้วให้ router บน frontend handle เอง
-      const redirectTo = window.location.pathname
-        .replace(/^\/myclinic-backend/, ''); // ตัด prefix repo name
-      window.location.href = `/myclinic-backend/?redirect=${redirectTo}`;
+    <meta charset="utf-8">
+    <title>My Clinic - Redirecting...</title>
+    <script type="text/javascript">
+      // Store the full path that led to the 404 page into sessionStorage.
+      // We will use this in the main application script to restore the correct path.
+      sessionStorage.redirect = window.location.href;
     </script>
+    <!-- Redirect to the root index.html of your SPA.
+         The path should be /<REPO_NAME>/ for a GitHub Project Page. -->
+    <meta http-equiv="refresh" content="0;url=/myclinic-backend/">
   </head>
   <body>
-    <p>Redirecting...</p>
+    If you are not redirected automatically, please <a href="/myclinic-backend/">click here to go to the homepage</a>.
   </body>
 </html>
