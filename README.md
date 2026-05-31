@@ -37,7 +37,7 @@ flowchart TD
     Q --> R[✨ เสร็จสิ้นบริการคนไข้กลับบ้านได้]
 
     %% Offline Sync Sync Pipeline %%
-    subgraph Offline Sync Engine (IndexedDB Cache)
+    subgraph "Offline Sync Engine (IndexedDB Cache)"
         S[เครือข่ายอินเทอร์เน็ตล่ม / ออฟไลน์] --> T[ดึงระบบแคชหน้าบ้านใช้งานได้ปกติ 100%]
         T --> U[กักเก็บคำสั่งเขียน POST/PUT/DELETE ลงใน Offline Queue]
         U --> V{ตรวจจับสัญญาณคืนกลับออนไลน์?}
