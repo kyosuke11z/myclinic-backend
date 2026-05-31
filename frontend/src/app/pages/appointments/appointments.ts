@@ -28,12 +28,13 @@ export class AppointmentsPage implements OnInit {
 
   // Form selected fields
   public selectedAppointment = signal<Omit<Appointment, 'id'>>({
+    patient_id: null,
     patient_name: '',
     appointment_date: '',
     appointment_time: '',
     reason: '',
     status: 'Pending',
-    patient_id: null
+    doctor_id: null
   });
 
   // Computed filtered list of appointments
@@ -75,12 +76,13 @@ export class AppointmentsPage implements OnInit {
     // Set form to blank/default values
     const today = new Date().toISOString().split('T')[0];
     this.selectedAppointment.set({
+      patient_id: null,
       patient_name: '',
       appointment_date: today,
       appointment_time: '09:00',
       reason: '',
       status: 'Pending',
-      patient_id: null
+      doctor_id: null
     });
     
     this.isModalOpen.set(true);
@@ -91,12 +93,13 @@ export class AppointmentsPage implements OnInit {
     this.activeAppointmentId.set(app.id || null);
     
     this.selectedAppointment.set({
+      patient_id: app.patient_id,
       patient_name: app.patient_name,
       appointment_date: app.appointment_date,
       appointment_time: app.appointment_time ? app.appointment_time.substring(0, 5) : '',
       reason: app.reason || '',
       status: app.status,
-      patient_id: app.patient_id
+      doctor_id: app.doctor_id
     });
     
     this.isModalOpen.set(true);

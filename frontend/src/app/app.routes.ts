@@ -22,6 +22,26 @@ export const routes: Routes = [
       {
         path: 'appointments',
         loadComponent: () => import('./pages/appointments/appointments').then(m => m.AppointmentsPage)
+      },
+      {
+        path: 'triage',
+        loadComponent: () => import('./pages/triage/triage').then(m => m.TriagePage)
+      },
+      {
+        path: 'consultation',
+        loadComponent: () => import('./pages/consultation/consultation').then(m => m.ConsultationPage)
+      },
+      {
+        path: 'dispensing',
+        loadComponent: () => import('./pages/dispensing/dispensing').then(m => m.DispensingPage)
+      },
+      {
+        path: 'cashier',
+        loadComponent: () => import('./pages/cashier/cashier').then(m => m.CashierPage)
+      },
+      {
+        path: 'audit-logs',
+        loadComponent: () => import('./pages/audit-logs/audit-logs').then(m => m.AuditLogsPage)
       }
     ]
   },

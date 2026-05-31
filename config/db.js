@@ -1,25 +1,79 @@
-const mysql = require('mysql2/promise');
-require('dotenv').config();
+const sqlite3 = require('sqlite3').verbose();
+const path = require('path');
 
-// Create connection pool
-const pool = mysql.createPool({
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'myclinic',
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
+const dbPath = path.join(__dirname, '..', 'myclinic.db');
+
+const db = new sqlite3.Database(dbPath, (err) => {
+  if (err) {
+    console.error('❌ Error opening SQLite database:', err.message);
+  } else {
+    console.log('✅ Connected to local SQLite Database successfully.');
+  }
 });
 
-// Test connection on boot
-pool.getConnection()
-  .then(connection => {
-    console.log('✅ Connected to MySQL Database successfully.');
-    connection.release();
-  })
-  .catch(err => {
-    console.error('❌ Error connecting to the database:', err.message);
+/**
+ * Intelligent Query helper designed as a drop-in replacement for mysql2/promise.
+ * It parses the SQL statement:
+ * - If it's a write action (INSERT/UPDATE/DELETE), it runs db.run() and returns [resultObj]
+ * - If it's a read action (SELECT), it runs db.all() and returns [rowsArray]
+ */
+const query = (sql, params = []) => {
+  return new Promise((resolve, reject) => {
+    const isWrite = /^\s*(insert|update|delete|replace|create|drop|alter)\b/i.test(sql);
+    
+    if (isWrite) {
+      db.run(sql, params, function(err) {
+        if (err) {
+          reject(err);
+        } else {
+          // Format like mysql2 return array: [result]
+          resolve([{ insertId: this.lastID, affectedRows: this.changes }]);
+        }
+      });
+    } else {
+      db.all(sql, params, (err, rows) => {
+        if (err) {
+          reject(err);
+        } else {
+          // Format like mysql2 return array: [rows]
+          resolve([rows]);
+        }
+      });
+    }
   });
+};
 
-module.exports = pool;
+const get = (sql, params = []) => {
+  return new Promise((resolve, reject) => {
+    db.get(sql, params, (err, row) => {
+      if (err) reject(err);
+      else resolve(row);
+    });
+  });
+};
+
+const run = (sql, params = []) => {
+  return new Promise((resolve, reject) => {
+    db.run(sql, params, function(err) {
+      if (err) reject(err);
+      else resolve({ insertId: this.lastID, changes: this.changes });
+    });
+  });
+};
+
+const exec = (sql) => {
+  return new Promise((resolve, reject) => {
+    db.exec(sql, (err) => {
+      if (err) reject(err);
+      else resolve();
+    });
+  });
+};
+
+module.exports = {
+  db,
+  query,
+  get,
+  run,
+  exec
+};

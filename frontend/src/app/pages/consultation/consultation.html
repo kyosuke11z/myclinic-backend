@@ -1,0 +1,239 @@
+<div class="patients-header">
+  <div>
+    <h1 style="font-size: 26px; font-weight: 700;">ห้องตรวจรักษาและบันทึกแพทย์ (Doctor Console)</h1>
+    <p style="font-size: 14px; color: var(--text-secondary);">บันทึกประวัติการตรวจรักษา วินิจฉัยโรคตามมาตรฐาน ICD-10 และจ่ายยาแบบเรียลไทม์</p>
+  </div>
+</div>
+
+@if (isLoading()) {
+  <div class="loader-container">
+    <div class="spinner"></div>
+    <p style="color: var(--text-secondary); font-weight: 500;">กำลังโหลดรายการคิวคนไข้ห้องตรวจ...</p>
+  </div>
+} @else {
+  @if (!isConsultationOpen()) {
+    @if (doctorQueues().length === 0) {
+      <div class="card" style="text-align: center; padding: 60px 0; color: var(--text-secondary);">
+        <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color: #cbd5e1; margin-bottom: 12px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 14 14"/></svg>
+        <p style="font-size: 16px; font-weight: 600;">ยังไม่มีคนไข้ส่งคิวเข้าห้องตรวจ</p>
+        <p style="font-size: 14px; margin-top: 4px;">คิวจะปรากฏหลังจากพยาบาลแผนกคัดกรองวัดสัญญาณชีพแล้ว</p>
+      </div>
+    } @else {
+      <div class="table-container">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>คิว</th>
+              <th>HN</th>
+              <th>ชื่อคนไข้</th>
+              <th>เพศ</th>
+              <th>วันเกิด (DOB)</th>
+              <th>สถานะคิว</th>
+              <th style="width: 120px; text-align: center;">เข้าตรวจ</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (q of doctorQueues(); track q.id) {
+              <tr>
+                <td style="font-weight: 700; color: var(--primary); font-size: 16px;">{{ q.queue_number }}</td>
+                <td style="font-weight: 600;">{{ q.patient_hn }}</td>
+                <td style="font-weight: 600;">{{ q.patient_name }}</td>
+                <td>{{ q.gender }}</td>
+                <td>{{ q.dob || '-' }}</td>
+                <td>
+                  <span class="badge badge-pending">{{ q.current_station }}</span>
+                </td>
+                <td>
+                  <div style="text-align: center;">
+                    <button class="btn btn-primary" style="font-size: 13px; padding: 6px 12px;" (click)="openConsultation(q)">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 16.2A12 12 0 0 1 8.3 8.3"/><circle cx="12" cy="12" r="4"/></svg>
+                      <span>เริ่มตรวจโรค</span>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  } @else {
+    <!-- Full-screen consult panels -->
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+      <h2 style="font-size: 20px; font-weight: 700;">
+        กำลังตรวจรักษา: <span style="color: var(--primary);">{{ activeQueue()?.patient_name }}</span> (คิว: {{ activeQueue()?.queue_number }})
+      </h2>
+      <button class="btn btn-secondary" (click)="closeConsultation()">ย้อนกลับตารางคิว</button>
+    </div>
+    
+    <div class="consult-grid">
+      <!-- Left side: Patient EMR History & Vitals -->
+      <div style="display: flex; flex-direction: column; gap: 20px;">
+        <!-- Demographics & Allergies -->
+        <div class="card" style="border-left: 6px solid var(--primary);">
+          <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">ประวัติและอาการแพ้ยา</h3>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 14px;">
+            <div><strong>HN:</strong> {{ patientHistory()?.patient?.hn }}</div>
+            <div><strong>เพศ/วันเกิด:</strong> {{ patientHistory()?.patient?.gender }} ({{ patientHistory()?.patient?.dob }})</div>
+            <div><strong>เบอร์โทร:</strong> {{ patientHistory()?.patient?.phone }}</div>
+            <div><strong>ประวัติแพ้ยา:</strong> <span style="color: var(--error); font-weight: 700;">{{ patientHistory()?.patient?.allergies || 'ไม่มีประวัติแพ้ยา' }}</span></div>
+          </div>
+          @if (patientHistory()?.patient?.medical_history) {
+            <div style="margin-top: 10px; font-size: 14px; background-color: #f8fafc; padding: 8px; border-radius: var(--radius-sm);">
+              <strong>โรคประจำตัวเดิม:</strong> {{ patientHistory()?.patient?.medical_history }}
+            </div>
+          }
+        </div>
+        
+        <!-- Vital Signs History (Scrollable) -->
+        <div class="card">
+          <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">ประวัติการวัดสัญญาณชีพพยาบาล</h3>
+          <div class="history-card">
+            @if (!patientHistory()?.vitals || patientHistory()?.vitals.length === 0) {
+              <p style="color: var(--text-secondary); text-align: center; padding: 20px 0;">ยังไม่มีบันทึกสัญญาณชีพ</p>
+            } @else {
+              @for (v of patientHistory()?.vitals; track v.id; let first = $first) {
+                <div style="padding: 10px; border-bottom: 1px solid var(--border-color); font-size: 13.5px; border-left: 3px solid var(--success);" [style.background-color]="first ? '#f0fdf4' : 'transparent'">
+                  <div style="display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 4px;">
+                    <span>ครั้งที่บันทึก ({{ v.recorded_at | slice:0:16 }})</span>
+                    <span style="color: var(--primary);">{{ first ? 'ล่าสุดวันนี้' : '' }}</span>
+                  </div>
+                  <div>ความดัน: {{ v.bp_systolic }}/{{ v.bp_diastolic }} mmHg | ชีพจร: {{ v.pulse }} bpm</div>
+                  <div>น้ำหนัก: {{ v.weight }} kg | ส่วนสูง: {{ v.height }} cm | ไข้: {{ v.temperature }}°C | O2: {{ v.oxygen_saturation }}%</div>
+                </div>
+              }
+            }
+          </div>
+        </div>
+        
+        <!-- Past Prescriptions History -->
+        <div class="card">
+          <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">ประวัติการรักษาโรคและการสั่งยาเดิม</h3>
+          <div class="history-card">
+            @if (!patientHistory()?.prescriptions || patientHistory()?.prescriptions.length === 0) {
+              <p style="color: var(--text-secondary); text-align: center; padding: 20px 0;">ยังไม่มีประวัติการรักษาเดิม</p>
+            } @else {
+              @for (pr of patientHistory()?.prescriptions; track pr.id) {
+                <div style="padding: 12px; border-bottom: 1px solid var(--border-color); font-size: 13.5px; background: #fafafa; border-radius: var(--radius-sm); margin-bottom: 8px;">
+                  <div style="display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 4px;">
+                    <span>วินิจฉัยรหัสโรค: <span style="color: var(--primary);">{{ pr.diagnosed_icd10 }}</span></span>
+                    <span>วันที่: {{ pr.created_at | slice:0:10 }}</span>
+                  </div>
+                  <div style="margin-top: 4px; color: var(--text-secondary);">
+                    <strong>S (อาการ):</strong> {{ pr.soap_subjective }} <br/>
+                    <strong>A (ประเมิน):</strong> {{ pr.soap_assessment }} <br/>
+                    <strong>P (สั่งยา):</strong> {{ pr.soap_plan }}
+                  </div>
+                  
+                  <!-- Prescribed items -->
+                  <div style="margin-top: 6px; font-size: 12px; border-top: 1px dashed var(--border-color); padding-top: 4px;">
+                    <strong>รายการยาจ่ายเดิม:</strong>
+                    @for (item of pr.items; track item.id) {
+                      <div style="padding-left: 8px;">• {{ item.drug_name }} จำนวน {{ item.quantity }} หน่วย ({{ item.dosage_instructions }})</div>
+                    }
+                  </div>
+                </div>
+              }
+            }
+          </div>
+        </div>
+      </div>
+      
+      <!-- Right side: SOAP Notes Consultation Form & Rx Order -->
+      <div style="display: flex; flex-direction: column; gap: 24px;">
+        <div class="card">
+          <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">บันทึกเวชระเบียนการตรวจแพทย์ (SOAP Form)</h3>
+          
+          <form (submit)="onSubmitConsultation(); $event.preventDefault()">
+            <div class="form-group">
+              <label class="form-label">วินิจฉัยรหัสโรคสากล ICD-10 <span style="color: var(--error);">*</span></label>
+              <input type="text" class="form-input" [ngModel]="diagnosedIcd10()" (ngModelChange)="diagnosedIcd10.set($event)" name="icd10" required />
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">S - Subjective (อาการที่คนไข้บอกเล่า) <span style="color: var(--error);">*</span></label>
+              <textarea class="form-textarea" rows="2" [ngModel]="soapSubjective()" (ngModelChange)="soapSubjective.set($event)" name="subjective" required></textarea>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">O - Objective (ผลการตรวจร่างกายแพทย์)</label>
+              <textarea class="form-textarea" rows="2" [ngModel]="soapObjective()" (ngModelChange)="soapObjective.set($event)" name="objective"></textarea>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">A - Assessment (การประเมินและการวินิจฉัย) <span style="color: var(--error);">*</span></label>
+              <textarea class="form-textarea" rows="2" [ngModel]="soapAssessment()" (ngModelChange)="soapAssessment.set($event)" name="assessment" required></textarea>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">P - Plan (แผนการรักษา/คำสั่งแพทย์)</label>
+              <textarea class="form-textarea" rows="2" [ngModel]="soapPlan()" (ngModelChange)="soapPlan.set($event)" name="plan"></textarea>
+            </div>
+            
+            <!-- Prescription Panel -->
+            <div class="rx-box">
+              <h4 style="font-size: 15px; font-weight: 700; margin-bottom: 12px; color: var(--text-primary);">ใบสั่งสั่งจ่ายยาห้องยา (Rx Pharmacy Order)</h4>
+              
+              <div style="display: grid; grid-template-columns: 1.5fr 0.5fr; gap: 8px; margin-bottom: 8px;">
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label">เลือกตัวยาในคลังยา</label>
+                  <select class="form-select" [ngModel]="selectedDrugId()" (ngModelChange)="selectedDrugId.set($event)" name="selDrug">
+                    <option value="0">-- เลือกยาที่จะสั่งจ่าย --</option>
+                    @for (d of drugs(); track d.id) {
+                      <option [value]="d.id" [disabled]="d.stock_quantity <= 0">
+                        {{ d.name }} - ยอดคลัง: {{ d.stock_quantity }} ({{ d.price_per_unit }} บ./ชิ้น)
+                      </option>
+                    }
+                  </select>
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label">จำนวน</label>
+                  <input type="number" class="form-input" [ngModel]="selectedQty()" (ngModelChange)="selectedQty.set($event)" name="selQty" min="1" />
+                </div>
+              </div>
+              
+              <div class="form-group">
+                <label class="form-label">วิธีใช้และขนาดรับประทาน (Instructions)</label>
+                <input type="text" class="form-input" [ngModel]="dosageInstructions()" (ngModelChange)="dosageInstructions.set($event)" name="selInstr" placeholder="เช่น ทานวันละ 1 ครั้ง หลังอาหาร" />
+              </div>
+              
+              <button type="button" class="btn btn-secondary" style="width: 100%; font-size: 13.5px; border: 1.5px dashed var(--primary); color: var(--primary);" (click)="addDrugToRx()">
+                + เพิ่มตัวยานี้ในใบสั่งยา
+              </button>
+              
+              <!-- Prescribed items listing -->
+              <div style="margin-top: 16px;">
+                <h5 style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">รายการยาสั่งจ่ายแล้วในบิลตรวจนี้ ({{ prescribedItems().length }} รายการ):</h5>
+                
+                @if (prescribedItems().length === 0) {
+                  <p style="font-size: 13px; color: var(--text-secondary); text-align: center; padding: 12px 0;">ไม่มีการสั่งจ่ายยา (ตรวจรับคำแนะนำเพียงอย่างเดียว)</p>
+                } @else {
+                  @for (item of prescribedItems(); track item.drug_id) {
+                    <div class="rx-item">
+                      <div style="font-size: 13.5px; flex: 1;">
+                        <div style="font-weight: 600;">{{ getDrugName(item.drug_id) }} x {{ item.quantity }} หน่วย</div>
+                        <div style="font-size: 12px; color: var(--text-secondary);">วิธีใช้: {{ item.dosage_instructions }}</div>
+                      </div>
+                      <button type="button" class="action-icon-btn delete" (click)="removeDrugFromRx(item.drug_id)" title="ลบยานี้">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                      </button>
+                    </div>
+                  }
+                }
+              </div>
+            </div>
+            
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
+              <button type="button" class="btn btn-secondary" (click)="closeConsultation()">ยกเลิก</button>
+              <button type="submit" class="btn btn-primary" style="background-color: var(--primary-hover);">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                <span>บันทึกการวินิจฉัยและส่งจ่ายคิวห้องยา</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  }
+}

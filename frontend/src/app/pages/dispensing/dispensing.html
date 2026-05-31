@@ -1,0 +1,222 @@
+<div class="patients-header">
+  <div>
+    <h1 style="font-size: 26px; font-weight: 700;">แผนกเภสัชกรรม คลังยาและเวชภัณฑ์ (Pharmacy Workspace)</h1>
+    <p style="font-size: 14px; color: var(--text-secondary);">จัดการคิวรอจ่ายยา ตรวจเช็คสต็อกยาคงคลัง และแจ้งเตือนยาใกล้หมดอายุ</p>
+  </div>
+</div>
+
+<!-- Alert Banner Stock -->
+@if (lowStockCount() > 0) {
+  <div class="error-alert" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; background-color: rgba(243, 156, 18, 0.1); border-color: rgba(243, 156, 18, 0.2); color: var(--secondary);">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <strong>คำเตือนจากคลังยา:</strong> มียารายการที่ยอดเหลือต่ำกว่าจุดสั่งซื้อวิกฤต {{ lowStockCount() }} รายการ กรุณาสั่งซื้อหรือเติมสต็อกยาเพื่อป้องการขาดแคลน
+    </div>
+  </div>
+}
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+  <!-- Left Side: Dispensing Queue -->
+  <div class="card" style="align-self: flex-start;">
+    <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">คิวใบสั่งยาจากแพทย์ (Pending Rx Queue)</h2>
+    
+    @if (isLoading()) {
+      <div class="loader-container" style="padding: 40px 0;">
+        <div class="spinner"></div>
+      </div>
+    } @else {
+      @if (pendingPrescriptions().length === 0) {
+        <div style="text-align: center; padding: 40px 0; color: var(--text-secondary);">
+          <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color: #cbd5e1; margin-bottom: 8px;"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg>
+          <p>ยังไม่มีคิวใบสั่งยารอจัดในขณะนี้</p>
+        </div>
+      } @else {
+        <div class="table-container">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>คิว</th>
+                <th>HN</th>
+                <th>ชื่อคนไข้</th>
+                <th>ผู้สั่งยา</th>
+                <th style="width: 100px; text-align: center;">จัดยา</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (pr of pendingPrescriptions(); track pr.id) {
+                <tr>
+                  <td style="font-weight: 700; color: var(--primary);">{{ pr.queue_number }}</td>
+                  <td style="font-weight: 600;">{{ pr.patient_hn }}</td>
+                  <td style="font-weight: 600;">{{ pr.patient_name }}</td>
+                  <td>{{ pr.doctor_name }}</td>
+                  <td>
+                    <div style="text-align: center;">
+                      <button class="btn btn-primary" style="font-size: 12px; padding: 5px 10px;" (click)="openDispenseModal(pr)">
+                        <span>ตรวจจัดยา</span>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    }
+  </div>
+  
+  <!-- Right Side: Drugs Inventory Ledger -->
+  <div class="card">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+      <h2 style="font-size: 18px; font-weight: 700;">บัญชีคลังยา (Inventory Ledger)</h2>
+      <button class="btn btn-secondary" style="font-size: 13px; padding: 6px 12px;" (click)="openAddDrugModal()">+ เพิ่มตัวยาใหม่</button>
+    </div>
+    
+    @if (isLoading()) {
+      <div class="loader-container" style="padding: 40px 0;">
+        <div class="spinner"></div>
+      </div>
+    } @else {
+      <div class="table-container" style="max-height: 500px; overflow-y: auto;">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>รหัสยา</th>
+              <th>ชื่อยา</th>
+              <th>ประเภท</th>
+              <th>คงคลัง</th>
+              <th>ราคา/ชิ้น</th>
+              <th style="width: 60px; text-align: center;">เติม</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (d of drugs(); track d.id) {
+              <tr [style.background-color]="d.stock_quantity <= d.reorder_level ? 'rgba(243, 156, 18, 0.05)' : 'transparent'">
+                <td style="font-weight: 600;">{{ d.code }}</td>
+                <td style="font-weight: 600;">
+                  {{ d.name }}
+                  @if (d.stock_quantity <= d.reorder_level) {
+                    <span style="font-size: 10px; background-color: var(--secondary); color: white; padding: 2px 6px; border-radius: 50px; font-weight: bold; margin-left: 4px;">คลังต่ำ!</span>
+                  }
+                </td>
+                <td>{{ d.type }}</td>
+                <td style="font-weight: 700;" [style.color]="d.stock_quantity <= d.reorder_level ? 'var(--secondary)' : 'var(--text-primary)'">
+                  {{ d.stock_quantity }}
+                </td>
+                <td>{{ d.price_per_unit }} บ.</td>
+                <td>
+                  <div style="text-align: center;">
+                    <button class="action-icon-btn edit" (click)="addStockCount(d)" title="รับสต็อกยาเพิ่ม">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+</div>
+
+<!-- Dispensing Consultation Checklist Modal -->
+@if (isDispenseModalOpen() && activePrescription()) {
+  <div class="modal-overlay" (click)="closeDispenseModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()" style="max-width: 500px;">
+      <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 4px;">ตรวจสอบจัดจ่ายยา (Dispensing Verification)</h3>
+      <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 20px;">
+        คนไข้: <strong>{{ activePrescription()?.patient_name }}</strong> (HN: {{ activePrescription()?.patient_hn }}) | คิว: {{ activePrescription()?.queue_number }}
+      </p>
+      
+      <div style="background-color: #f8fafc; padding: 12px; border-radius: var(--radius-sm); font-size: 13.5px; border-left: 4px solid var(--primary); margin-bottom: 20px;">
+        <strong>รหัสวินิจฉัยแพทย์:</strong> {{ activePrescription()?.diagnosed_icd10 }} <br/>
+        <strong>คำสั่งจ่ายยาแพทย์ (Plan):</strong> {{ activePrescription()?.soap_plan }}
+      </div>
+      
+      <div style="margin-bottom: 24px;">
+        <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 8px; color: var(--text-primary);">รายการยาที่ต้องบรรจุแพ็ค:</h4>
+        
+        @for (item of activePrescription()?.items; track item.id) {
+          <div style="padding: 10px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; background: white;">
+            <div>
+              <div style="font-weight: 600; font-size: 14px; color: var(--text-primary);">{{ item.drug_name }} ({{ item.drug_code }})</div>
+              <div style="font-size: 12px; color: var(--text-secondary);">วิธีใช้: {{ item.dosage_instructions }}</div>
+            </div>
+            <div style="font-size: 15px; font-weight: 700; color: var(--primary); background: rgba(26, 188, 156, 0.08); padding: 4px 10px; border-radius: var(--radius-sm);">
+              จ่าย: {{ item.quantity }}
+            </div>
+          </div>
+        }
+      </div>
+      
+      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="btn btn-secondary" (click)="closeDispenseModal()">ยกเลิก</button>
+        <button type="button" class="btn btn-primary" (click)="onConfirmDispensing()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          <span>บรรจุหีบห่อและยืนยันจ่ายยา</span>
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Add Drug Modal -->
+@if (isDrugModalOpen()) {
+  <div class="modal-overlay" (click)="closeDrugModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 20px;">เพิ่มรายการยาใหม่เข้าบัญชีคลัง</h3>
+      
+      <form (submit)="onSaveDrug(); $event.preventDefault()">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label class="form-label">รหัสยา <span style="color: var(--error);">*</span></label>
+            <input type="text" class="form-input" [ngModel]="newDrug().code" (ngModelChange)="newDrug.set({...newDrug(), code: $event})" name="code" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">ชื่อรายการยา <span style="color: var(--error);">*</span></label>
+            <input type="text" class="form-input" placeholder="เช่น Paracetamol 500mg" [ngModel]="newDrug().name" (ngModelChange)="newDrug.set({...newDrug(), name: $event})" name="name" required />
+          </div>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label class="form-label">ประเภทรูปแบบยา</label>
+            <select class="form-select" [ngModel]="newDrug().type" (ngModelChange)="newDrug.set({...newDrug(), type: $event})" name="type">
+              <option value="Tablet">Tablet (ยาเม็ดแข็ง)</option>
+              <option value="Capsule">Capsule (แคปซูล)</option>
+              <option value="Liquid">Liquid (ยาน้ำ)</option>
+              <option value="Injection">Injection (ยาฉีด)</option>
+              <option value="Cream">Cream (ยาทา/ครีม)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">ราคาขายต่อหน่วย (บาท) <span style="color: var(--error);">*</span></label>
+            <input type="number" step="0.01" class="form-input" [ngModel]="newDrug().price_per_unit" (ngModelChange)="newDrug.set({...newDrug(), price_per_unit: $event})" name="price" required />
+          </div>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label class="form-label">จำนวนเริ่มเข้าคลัง</label>
+            <input type="number" class="form-input" [ngModel]="newDrug().stock_quantity" (ngModelChange)="newDrug.set({...newDrug(), stock_quantity: $event})" name="stock" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">ยอดขั้นต่ำต้องเตือนซื้อ</label>
+            <input type="number" class="form-input" [ngModel]="newDrug().reorder_level" (ngModelChange)="newDrug.set({...newDrug(), reorder_level: $event})" name="reorder" />
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">วันหมดอายุของยาล็อตนี้</label>
+          <input type="date" class="form-input" [ngModel]="newDrug().expiry_date" (ngModelChange)="newDrug.set({...newDrug(), expiry_date: $event})" name="expiry" />
+        </div>
+        
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
+          <button type="button" class="btn btn-secondary" (click)="closeDrugModal()">ยกเลิก</button>
+          <button type="submit" class="btn btn-primary">บันทึกยาใหม่</button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

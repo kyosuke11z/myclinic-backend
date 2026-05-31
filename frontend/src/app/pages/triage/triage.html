@@ -1,0 +1,115 @@
+<div class="patients-header">
+  <div>
+    <h1 style="font-size: 26px; font-weight: 700;">แผนกพยาบาลคัดกรอง (Triage Console)</h1>
+    <p style="font-size: 14px; color: var(--text-secondary);">ชั่งน้ำหนัก วัดความดัน และสัญญาณชีพแรกรับผู้ป่วยก่อนเข้าพบแพทย์</p>
+  </div>
+</div>
+
+@if (isLoading()) {
+  <div class="loader-container">
+    <div class="spinner"></div>
+    <p style="color: var(--text-secondary); font-weight: 500;">กำลังโหลดรายการผู้ป่วยในคิว...</p>
+  </div>
+} @else {
+  @if (triageQueues().length === 0) {
+    <div class="card" style="text-align: center; padding: 60px 0; color: var(--text-secondary);">
+      <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color: #cbd5e1; margin-bottom: 12px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 14 14"/></svg>
+      <p style="font-size: 16px; font-weight: 600;">ยังไม่มีคนไข้รอคัดกรองในวันนี้</p>
+      <p style="font-size: 14px; margin-top: 4px;">เมื่อฝ่ายต้อนรับลงคิวตรวจพยาบาล คิวจะเด้งขึ้นที่นี่อัตโนมัติ</p>
+    </div>
+  } @else {
+    <div class="table-container">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>คิว</th>
+            <th>HN</th>
+            <th>ชื่อผู้ป่วย</th>
+            <th>เพศ</th>
+            <th>อายุ/วันเกิด</th>
+            <th>สถานะปัจจุบัน</th>
+            <th style="width: 120px; text-align: center;">คัดกรอง</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (q of triageQueues(); track q.id) {
+            <tr>
+              <td style="font-weight: 700; color: var(--primary); font-size: 16px;">{{ q.queue_number }}</td>
+              <td style="font-weight: 600;">{{ q.patient_hn }}</td>
+              <td style="font-weight: 600;">{{ q.patient_name }}</td>
+              <td>{{ q.gender }}</td>
+              <td>{{ q.dob || '-' }}</td>
+              <td>
+                <span class="badge badge-pending">{{ q.current_station }}</span>
+              </td>
+              <td>
+                <div style="text-align: center;">
+                  <button class="btn btn-primary" style="font-size: 13px; padding: 6px 12px;" (click)="openTriageModal(q)">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                    <span>วัดสัญญาณชีพ</span>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+}
+
+<!-- Vitals Form Modal -->
+@if (isModalOpen() && activeQueue()) {
+  <div class="modal-overlay" (click)="closeModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()" style="max-width: 550px;">
+      <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 8px;">คัดกรองสัญญาณชีพแรกรับ</h3>
+      <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 20px;">
+        คนไข้: <strong style="color: var(--text-primary);">{{ activeQueue()?.patient_name }}</strong> (HN: {{ activeQueue()?.patient_hn }}) | คิว: {{ activeQueue()?.queue_number }}
+      </p>
+      
+      <form (submit)="onSaveVitals(); $event.preventDefault()">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label class="form-label">น้ำหนัก (kg) <span style="color: var(--error);">*</span></label>
+            <input type="number" step="0.1" class="form-input" [ngModel]="vitalsForm().weight" (ngModelChange)="vitalsForm.set({...vitalsForm(), weight: $event})" name="weight" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">ส่วนสูง (cm) <span style="color: var(--error);">*</span></label>
+            <input type="number" step="0.1" class="form-input" [ngModel]="vitalsForm().height" (ngModelChange)="vitalsForm.set({...vitalsForm(), height: $event})" name="height" required />
+          </div>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label class="form-label">ความดันบน (Systolic) <span style="color: var(--error);">*</span></label>
+            <input type="number" class="form-input" [ngModel]="vitalsForm().bp_systolic" (ngModelChange)="vitalsForm.set({...vitalsForm(), bp_systolic: $event})" name="bp_systolic" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">ความดันล่าง (Diastolic) <span style="color: var(--error);">*</span></label>
+            <input type="number" class="form-input" [ngModel]="vitalsForm().bp_diastolic" (ngModelChange)="vitalsForm.set({...vitalsForm(), bp_diastolic: $event})" name="bp_diastolic" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">ชีพจร (Pulse) <span style="color: var(--error);">*</span></label>
+            <input type="number" class="form-input" [ngModel]="vitalsForm().pulse" (ngModelChange)="vitalsForm.set({...vitalsForm(), pulse: $event})" name="pulse" required />
+          </div>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label class="form-label">อุณหภูมิร่างกาย (°C) <span style="color: var(--error);">*</span></label>
+            <input type="number" step="0.1" class="form-input" [ngModel]="vitalsForm().temperature" (ngModelChange)="vitalsForm.set({...vitalsForm(), temperature: $event})" name="temperature" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">ค่าออกซิเจนปลายนิ้ว (%) <span style="color: var(--error);">*</span></label>
+            <input type="number" class="form-input" [ngModel]="vitalsForm().oxygen_saturation" (ngModelChange)="vitalsForm.set({...vitalsForm(), oxygen_saturation: $event})" name="oxygen_saturation" required />
+          </div>
+        </div>
+        
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
+          <button type="button" class="btn btn-secondary" (click)="closeModal()">ยกเลิก</button>
+          <button type="submit" class="btn btn-primary">บันทึกและส่งคิวเข้าพบแพทย์</button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
