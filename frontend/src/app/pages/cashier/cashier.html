@@ -1,7 +1,7 @@
 <div class="patients-header">
   <div>
-    <h1 style="font-size: 26px; font-weight: 700;">จุดรับชำระเงินและออกใบเสร็จ (Cashier Terminal)</h1>
-    <p style="font-size: 14px; color: var(--text-secondary);">ปิดบิลค่ารักษาและยา ชำระเงินค่าบริการทางการแพทย์ และออกใบเสร็จรับเงิน</p>
+    <h1 style="font-size: 26px; font-weight: 700;">💰 จุดรับชำระเงินและออกใบเสร็จ (Cashier POS Terminal)</h1>
+    <p style="font-size: 14px; color: var(--text-secondary);">จัดการปิดบิล ตรวจสิทธิ์คุ้มครองทางการแพทย์ บันทึกการแยกชำระส่วนต่าง (Co-pay) และออกใบเสร็จรับเงิน</p>
   </div>
 </div>
 
@@ -12,39 +12,41 @@
   </div>
 } @else {
   @if (pendingBills().length === 0) {
-    <div class="card" style="text-align: center; padding: 60px 0; color: var(--text-secondary);">
+    <div class="card" style="text-align: center; padding: 60px 0; color: var(--text-secondary); border-radius: var(--radius-lg);">
       <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color: #cbd5e1; margin-bottom: 12px;"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="12" y1="4" x2="12" y2="20"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
-      <p style="font-size: 16px; font-weight: 600;">ยังไม่มีคนไข้ในจุดรอชำระเงิน</p>
-      <p style="font-size: 14px; margin-top: 4px;">คิวชำระเงินจะเกิดขึ้นหลังจากที่เภสัชกรตรวจสอบและบรรจุยาเสร็จสิ้น</p>
+      <p style="font-size: 16px; font-weight: 600; color: var(--text-primary);">ยังไม่มีคนไข้ในจุดรอชำระเงินในขณะนี้</p>
+      <p style="font-size: 14px; margin-top: 4px; color: var(--text-secondary);">คิวชำระเงินจะเกิดขึ้นหลังจากที่เภสัชกรตรวจสอบและจัดเตรียมยาเสร็จสิ้นแล้ว</p>
     </div>
   } @else {
-    <div class="table-container">
+    <div class="table-container" style="border-radius: var(--radius-lg); overflow: hidden;">
       <table class="table">
         <thead>
           <tr>
-            <th>คิว</th>
-            <th>HN</th>
-            <th>ชื่อคนไข้</th>
-            <th>ยอดค้างชำระ</th>
-            <th>สถานะคิว</th>
-            <th style="width: 120px; text-align: center;">ชำระเงิน</th>
+            <th style="font-size: 14px;">ลำดับคิว</th>
+            <th style="font-size: 14px;">HN คนไข้</th>
+            <th style="font-size: 14px;">ชื่อ - นามสกุลคนไข้</th>
+            <th style="font-size: 14px;">ยอดค้างชำระทั้งหมด</th>
+            <th style="font-size: 14px;">สถานะจัดยา</th>
+            <th style="width: 140px; text-align: center; font-size: 14px;">ดำเนินการชำระเงิน</th>
           </tr>
         </thead>
         <tbody>
           @for (b of pendingBills(); track b.id) {
             <tr>
-              <td style="font-weight: 700; color: var(--primary);">{{ b.queue_number }}</td>
-              <td style="font-weight: 600;">{{ b.patient_hn }}</td>
-              <td style="font-weight: 600;">{{ b.patient_name }}</td>
-              <td style="font-weight: 700; color: var(--error); font-size: 16px;">{{ b.total_amount | number:'1.2-2' }} บาท</td>
+              <td style="font-weight: 700; color: var(--primary); font-size: 17px;">{{ b.queue_number }}</td>
+              <td style="font-weight: 600; font-family: 'Outfit';">{{ b.patient_hn }}</td>
+              <td style="font-weight: 600; color: var(--text-primary);">{{ b.patient_name }}</td>
+              <td style="font-weight: 700; color: var(--error); font-size: 16.5px;">{{ b.total_amount | number:'1.2-2' }} บาท</td>
               <td>
-                <span class="badge badge-pending">{{ b.queue_status }}</span>
+                <span class="badge" style="background-color: rgba(46, 204, 113, 0.12); color: var(--success); font-weight: 600; font-size: 12.5px; border: 1px solid rgba(46, 204, 113, 0.25);">
+                  ✨ พร้อมคิดเงิน
+                </span>
               </td>
               <td>
                 <div style="text-align: center;">
-                  <button class="btn btn-primary" style="font-size: 13px; padding: 6px 12px;" (click)="openCheckoutModal(b)">
+                  <button class="btn btn-primary" style="font-size: 13px; padding: 7px 14px; border-radius: 8px;" (click)="openCheckoutModal(b)">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
-                    <span>ออกบิลรับเงิน</span>
+                    <span>เปิดคิดเงิน</span>
                   </button>
                 </div>
               </td>
@@ -59,77 +61,140 @@
 <!-- POS Checkout Modal -->
 @if (isModalOpen() && activeBill()) {
   <div class="modal-overlay" (click)="closeModal()">
-    <div class="modal-content" (click)="$event.stopPropagation()" style="max-width: 550px;">
-      <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 4px;">สรุปรายการชำระเงิน (Invoice Bill Checkout)</h3>
-      <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 20px;">
-        คนไข้: <strong>{{ activeBill()?.patient_name }}</strong> (HN: {{ activeBill()?.patient_hn }}) | คิว: {{ activeBill()?.queue_number }}
-      </p>
-      
-      <!-- Itemized Receipt list -->
-      <div style="border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px; margin-bottom: 20px; background: #f8fafc;">
-        <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">รายละเอียดใบเสร็จค่ารักษา:</h4>
-        
-        <!-- Standard consult fee -->
-        <div style="display: flex; justify-content: space-between; font-size: 13.5px; margin-bottom: 6px;">
-          <span>• ค่าธรรมเนียมแพทย์และบริการวิชาชีพ (DF)</span>
-          <span style="font-weight: 600;">300.00 บาท</span>
+    <div class="modal-content" (click)="$event.stopPropagation()" style="max-width: 680px; padding: 28px; border-radius: var(--radius-lg);">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+        <div>
+          <h3 style="font-size: 21px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+            🧾 ใบแจ้งหนี้และสิทธิ์การรักษา (Split Invoice Checkout)
+          </h3>
+          <p style="font-size: 14.5px; color: var(--text-secondary); margin-top: 4px;">
+            คนไข้: <strong style="color: var(--text-primary);">{{ activeBill()?.patient_name }}</strong> ({{ activeBill()?.patient_hn }}) | คิว: <strong style="color: var(--primary);">{{ activeBill()?.queue_number }}</strong>
+          </p>
         </div>
-        
-        <!-- Prescribed drugs itemization -->
-        @if (activeBill()?.prescription_items) {
-          @for (item of activeBill()?.prescription_items; track item.id) {
-            <div style="display: flex; justify-content: space-between; font-size: 13.5px; margin-bottom: 6px; color: var(--text-secondary);">
-              <span>• {{ item.drug_name }} ({{ item.quantity }} x {{ item.price_per_unit | number:'1.2-2' }})</span>
-              <span style="font-weight: 500; color: var(--text-primary);">{{ (item.quantity * item.price_per_unit) | number:'1.2-2' }} บาท</span>
-            </div>
-          }
-        }
-        
-        <div style="border-top: 1.5px solid var(--border-color); margin-top: 12px; padding-top: 8px; display: flex; justify-content: space-between; font-weight: 700; font-size: 15px; color: var(--text-primary);">
-          <span>ยอดชำระก่อนหักส่วนลด:</span>
-          <span>{{ activeBill()?.total_amount | number:'1.2-2' }} บาท</span>
-        </div>
+        <button (click)="closeModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-secondary); line-height: 1;">&times;</button>
       </div>
-      
-      <!-- Form Cashier Inputs -->
-      <form (submit)="onCompleteCheckout(); $event.preventDefault()">
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-          <div class="form-group">
-            <label class="form-label">ส่วนลดของแถม (บาท)</label>
-            <input type="number" class="form-input" [ngModel]="discount()" (ngModelChange)="onDiscountChange($event)" name="discount" min="0" />
-          </div>
+
+      <!-- Main Columns for Premium UX Layout -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; border-top: 1px solid var(--border-color); padding-top: 16px;">
+        
+        <!-- Left: Itemized Invoice details -->
+        <div style="border-right: 1px solid var(--border-color); padding-right: 20px;">
+          <h4 style="font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            รายละเอียดรายการรักษา
+          </h4>
           
-          <div class="form-group">
-            <label class="form-label">ช่องทางชำระเงิน <span style="color: var(--error);">*</span></label>
-            <select class="form-select" [ngModel]="paymentMethod()" (ngModelChange)="paymentMethod.set($event)" name="payMethod" required>
-              <option value="Cash">Cash (เงินสด)</option>
-              <option value="QR">PromptPay QR (สแกนโอนเงิน)</option>
-              <option value="Credit">Credit Card (บัตรเครดิต)</option>
-              <option value="Insurance">Insurance (ประกันภัยเคลม/เบิกจ่าย)</option>
-            </select>
+          <div style="background-color: #f8fafc; border-radius: var(--radius-md); padding: 12px; min-height: 240px; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid var(--border-color);">
+            <div style="overflow-y: auto; max-height: 180px; padding-right: 4px;">
+              <!-- Standard profissional consulting fee (DF) -->
+              <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px; border-bottom: 1px dashed var(--border-color); padding-bottom: 6px;">
+                <span style="color: var(--text-primary);">• ค่าบริการทางการแพทย์ (DF)</span>
+                <span style="font-weight: 600; color: var(--text-primary);">300.00 บาท</span>
+              </div>
+              
+              <!-- Prescribed drugs items details -->
+              @if (activeBill()?.prescription_items) {
+                @for (item of activeBill()?.prescription_items; track item.id) {
+                  <div style="display: flex; justify-content: space-between; font-size: 12.5px; margin-bottom: 8px; color: var(--text-secondary);">
+                    <span>• {{ item.drug_name }} ({{ item.quantity }} เม็ด)</span>
+                    <span style="font-weight: 500; color: var(--text-primary);">{{ (item.quantity * item.price_per_unit) | number:'1.2-2' }} บาท</span>
+                  </div>
+                }
+              }
+            </div>
+
+            <!-- Pre-discount Gross total -->
+            <div style="border-top: 1.5px solid var(--border-color); padding-top: 10px; display: flex; justify-content: space-between; font-weight: 700; font-size: 14.5px; color: var(--text-primary);">
+              <span>ยอดรวมค่ารักษาดิบ:</span>
+              <span>{{ activeBill()?.total_amount | number:'1.2-2' }} บาท</span>
+            </div>
           </div>
         </div>
         
-        <div class="form-group" style="background-color: rgba(231, 76, 60, 0.05); padding: 12px; border-radius: var(--radius-sm); border-left: 4px solid var(--error); margin-bottom: 20px;">
-          <div style="display: flex; justify-content: space-between; font-size: 16px; font-weight: 700; color: var(--error); margin-bottom: 4px;">
-            <span>ยอดสุทธิที่ต้องเรียกเก็บ:</span>
-            <span>{{ netTotal() | number:'1.2-2' }} บาท</span>
-          </div>
+        <!-- Right: Insurance details and Split Settlements -->
+        <div>
+          <form (submit)="onCompleteCheckout(); $event.preventDefault()">
+            <!-- Coverage Scheme Selector -->
+            <div class="form-group" style="margin-bottom: 12px;">
+              <label class="form-label" style="font-weight: 600;">🛡️ สิทธิ์การรักษาพยาบาล (Coverage Rights)</label>
+              <select class="form-select" [ngModel]="coverageRight()" (ngModelChange)="onCoverageRightChange($event)" name="coverageRight" style="font-weight: 600;">
+                <option value="Self">จ่ายเงินเอง (Self-Pay 100%)</option>
+                <option value="UCS">สิทธิ์หลักประกันสุขภาพถ้วนหน้า (บัตรทอง 30 บาท)</option>
+                <option value="SSS">สิทธิ์ประกันสังคม (Social Security Scheme)</option>
+                <option value="CGD">สิทธิ์สวัสดิการข้าราชการ (เบิกตรงกรมบัญชีกลาง)</option>
+                <option value="Private">สิทธิ์ประกันสุขภาพเอกชน / บริษัทคู่สัญญา</option>
+              </select>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+              <!-- Special Discount Input -->
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" style="font-size: 13px;">🎁 ส่วนลดพิเศษ (บาท)</label>
+                <input type="number" class="form-input" style="padding: 8px 10px;" [ngModel]="discount()" (ngModelChange)="onDiscountChange($event)" name="discount" min="0" />
+              </div>
+              
+              <!-- Scheme Covered input (automatically set based on selected scheme, but user can edit it) -->
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" style="font-size: 13px; color: var(--primary-hover); font-weight: 600;">🛡️ ยอดคุ้มครองสิทธิ์ (บาท)</label>
+                <input type="number" class="form-input" style="padding: 8px 10px; color: var(--primary-hover); font-weight: 700; border-color: var(--primary);" 
+                       [ngModel]="coveredAmount()" (ngModelChange)="onCoveredAmountChange($event)" name="coveredAmount" min="0" [disabled]="coverageRight() === 'Self'" />
+              </div>
+            </div>
+
+            <!-- Visual Split Cards -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px;">
+              <!-- 1. Government / Insurance Scheme Coverage Card -->
+              <div style="border-radius: var(--radius-md); padding: 10px; border: 1.5px solid rgba(26, 188, 156, 0.2); background-color: rgba(26, 188, 156, 0.04); display: flex; flex-direction: column; justify-content: center; text-align: center;">
+                <span style="font-size: 11.5px; color: var(--text-secondary); font-weight: 500;">เบิกราชการ/ประกันสังคม</span>
+                <span style="font-size: 16px; font-weight: 700; color: var(--primary-hover); margin-top: 2px;">{{ coveredAmount() | number:'1.2-2' }} ฿</span>
+              </div>
+              
+              <!-- 2. Patient Cash Co-Pay Card -->
+              <div style="border-radius: var(--radius-md); padding: 10px; border: 1.5px solid rgba(243, 156, 18, 0.2); background-color: rgba(243, 156, 18, 0.04); display: flex; flex-direction: column; justify-content: center; text-align: center;">
+                <span style="font-size: 11.5px; color: var(--text-secondary); font-weight: 500;">ยอดร่วมจ่ายจริงคนไข้ (Co-pay)</span>
+                <span style="font-size: 16px; font-weight: 700; color: var(--secondary-hover); margin-top: 2px;">{{ patientCoPay() | number:'1.2-2' }} ฿</span>
+              </div>
+            </div>
+
+            <!-- Patient Direct Payment Settings -->
+            <div style="background-color: #fafafa; border-radius: var(--radius-md); padding: 12px; border: 1px solid var(--border-color);">
+              <div style="display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 8px; align-items: center; margin-bottom: 8px;">
+                <div>
+                  <label class="form-label" style="font-size: 13px; font-weight: 600; margin-bottom: 4px;">💳 ช่องทางการจ่ายเงินคนไข้</label>
+                  <select class="form-select" style="padding: 7px 10px; font-size: 13.5px;" [ngModel]="paymentMethod()" (ngModelChange)="paymentMethod.set($event)" name="payMethod" required>
+                    <option value="Cash">💵 เงินสด (Cash)</option>
+                    <option value="QR">📱 สแกน QR / PromptPay</option>
+                    <option value="Credit">💳 บัตรเครดิต (Credit Card)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label class="form-label" style="font-size: 13px; font-weight: 600; margin-bottom: 4px; color: var(--error);">💵 ยอดเงินรับจริง</label>
+                  <input type="number" class="form-input" style="padding: 7px 10px; font-size: 15px; font-weight: 700; color: var(--error); border-color: rgba(231, 76, 60, 0.3);" 
+                         [ngModel]="paidAmount()" (ngModelChange)="paidAmount.set($event)" name="paidAmount" required min="0" />
+                </div>
+              </div>
+
+              <!-- Dynamic Change Output -->
+              <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1.5px solid var(--border-color); padding-top: 8px; margin-top: 8px;">
+                <span style="font-size: 13.5px; font-weight: 600; color: var(--text-primary);">💴 ยอดเงินทอนคนไข้ (Change Due):</span>
+                <span style="font-size: 18px; font-weight: 700; color: var(--success);">{{ changeDue() | number:'1.2-2' }} บาท</span>
+              </div>
+            </div>
+
+            <!-- Submit action block -->
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+              <button type="button" class="btn btn-secondary" style="font-size: 13.5px; padding: 8px 16px;" (click)="closeModal()">ยกเลิก</button>
+              <button type="submit" class="btn btn-primary" style="font-size: 13.5px; padding: 8px 20px; background-color: var(--primary-hover); display: flex; align-items: center; gap: 6px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                <span>ปิดบิลและออกใบเสร็จ</span>
+              </button>
+            </div>
+          </form>
         </div>
         
-        <div class="form-group">
-          <label class="form-label">จำนวนเงินที่รับจริง (Cash Input) <span style="color: var(--error);">*</span></label>
-          <input type="number" class="form-input" style="font-size: 18px; font-weight: 700; color: var(--primary);" [ngModel]="paidAmount()" (ngModelChange)="paidAmount.set($event)" name="paidAmount" required min="0" />
-        </div>
-        
-        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
-          <button type="button" class="btn btn-secondary" (click)="closeModal()">ยกเลิก</button>
-          <button type="submit" class="btn btn-primary" style="background-color: var(--primary-hover);">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-            <span>ยืนยันชำระเงินและออกใบเสร็จ</span>
-          </button>
-        </div>
-      </form>
+      </div>
     </div>
   </div>
 }
+

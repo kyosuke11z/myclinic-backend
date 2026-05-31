@@ -14,6 +14,8 @@ export interface VitalSigns {
   pulse: number;
   temperature: number;
   oxygen_saturation: number;
+  triage_level?: 'Green' | 'Yellow' | 'Orange' | 'Red';
+  creatinine?: number;
   recorded_at?: string;
   recorded_by?: string;
 }

@@ -1,52 +1,54 @@
 <div class="patients-header">
   <div>
-    <h1 style="font-size: 26px; font-weight: 700;">แผนกพยาบาลคัดกรอง (Triage Console)</h1>
-    <p style="font-size: 14px; color: var(--text-secondary);">ชั่งน้ำหนัก วัดความดัน และสัญญาณชีพแรกรับผู้ป่วยก่อนเข้าพบแพทย์</p>
+    <h1 style="font-size: 26px; font-weight: 700;">🩺 แผนกซักประวัติและซักสัญญาณชีพแรกรับ</h1>
+    <p style="font-size: 14px; color: var(--text-secondary);">คัดกรองอาการนำของคนไข้ ชั่งน้ำหนัก วัดความดัน และประเมินระดับความฉุกเฉินเพื่อส่งคิวเข้าห้องตรวจ</p>
   </div>
 </div>
 
 @if (isLoading()) {
   <div class="loader-container">
     <div class="spinner"></div>
-    <p style="color: var(--text-secondary); font-weight: 500;">กำลังโหลดรายการผู้ป่วยในคิว...</p>
+    <p style="color: var(--text-secondary); font-weight: 500;">กำลังดาวน์โหลดคิวรอคัดกรองวันนี้...</p>
   </div>
 } @else {
   @if (triageQueues().length === 0) {
     <div class="card" style="text-align: center; padding: 60px 0; color: var(--text-secondary);">
       <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color: #cbd5e1; margin-bottom: 12px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 14 14"/></svg>
-      <p style="font-size: 16px; font-weight: 600;">ยังไม่มีคนไข้รอคัดกรองในวันนี้</p>
-      <p style="font-size: 14px; margin-top: 4px;">เมื่อฝ่ายต้อนรับลงคิวตรวจพยาบาล คิวจะเด้งขึ้นที่นี่อัตโนมัติ</p>
+      <p style="font-size: 16px; font-weight: 600;">ยังไม่มีคนไข้ในจุดรอซักประวัติในวันนี้</p>
+      <p style="font-size: 14px; margin-top: 4px;">เมื่อฝ่ายประชาสัมพันธ์ลงทะเบียนเปิดบัตรคิวตรวจ คิวคนไข้จะมาสแตนด์บายรอซักประวัติที่นี่โดยอัตโนมัติ</p>
     </div>
   } @else {
     <div class="table-container">
       <table class="table">
         <thead>
           <tr>
-            <th>คิว</th>
-            <th>HN</th>
-            <th>ชื่อผู้ป่วย</th>
+            <th>หมายเลขคิวตรวจ</th>
+            <th>HN คนไข้</th>
+            <th>ชื่อ - นามสกุลคนไข้</th>
             <th>เพศ</th>
-            <th>อายุ/วันเกิด</th>
-            <th>สถานะปัจจุบัน</th>
-            <th style="width: 120px; text-align: center;">คัดกรอง</th>
+            <th>เวลาลงทะเบียนคิว</th>
+            <th>สถานีบริการ</th>
+            <th style="width: 160px; text-align: center;">จัดการคัดกรอง</th>
           </tr>
         </thead>
         <tbody>
           @for (q of triageQueues(); track q.id) {
             <tr>
-              <td style="font-weight: 700; color: var(--primary); font-size: 16px;">{{ q.queue_number }}</td>
+              <td style="font-weight: 700; color: var(--primary); font-size: 16.5px;">{{ q.queue_number }}</td>
               <td style="font-weight: 600;">{{ q.patient_hn }}</td>
-              <td style="font-weight: 600;">{{ q.patient_name }}</td>
+              <td style="font-weight: 600; color: var(--text-primary);">{{ q.patient_name }}</td>
               <td>{{ q.gender }}</td>
-              <td>{{ q.dob || '-' }}</td>
+              <td style="color: var(--text-secondary); font-size: 13.5px; font-weight: 500;">{{ q.created_at | thaiRelativeTime }}</td>
               <td>
-                <span class="badge badge-pending">{{ q.current_station }}</span>
+                <span class="badge" style="background-color: rgba(127, 140, 141, 0.1); color: var(--text-primary); font-weight: 500;">
+                  {{ q.current_station }}
+                </span>
               </td>
               <td>
                 <div style="text-align: center;">
-                  <button class="btn btn-primary" style="font-size: 13px; padding: 6px 12px;" (click)="openTriageModal(q)">
+                  <button class="btn btn-primary" style="font-size: 13px; padding: 7px 14px;" (click)="openTriageModal(q)">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-                    <span>วัดสัญญาณชีพ</span>
+                    <span>ซักประวัติแรกรับ</span>
                   </button>
                 </div>
               </td>
@@ -58,56 +60,110 @@
   }
 }
 
-<!-- Vitals Form Modal -->
+<!-- Vitals Intake Modal Form -->
 @if (isModalOpen() && activeQueue()) {
   <div class="modal-overlay" (click)="closeModal()">
-    <div class="modal-content" (click)="$event.stopPropagation()" style="max-width: 550px;">
-      <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 8px;">คัดกรองสัญญาณชีพแรกรับ</h3>
-      <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 20px;">
-        คนไข้: <strong style="color: var(--text-primary);">{{ activeQueue()?.patient_name }}</strong> (HN: {{ activeQueue()?.patient_hn }}) | คิว: {{ activeQueue()?.queue_number }}
+    <div class="modal-content" (click)="$event.stopPropagation()" style="max-width: 580px; padding: 32px;">
+      <h3 style="font-size: 22px; font-weight: 700; margin-bottom: 4px; color: var(--text-primary);">📝 บันทึกประวัติและสัญญาณชีพแรกรับ</h3>
+      <p style="font-size: 14.5px; color: var(--text-secondary); margin-bottom: 24px;">
+        คนไข้: <strong style="color: var(--text-primary); font-size: 15.5px;">{{ activeQueue()?.patient_name }}</strong> (HN: {{ activeQueue()?.patient_hn }}) | คิว: {{ activeQueue()?.queue_number }}
       </p>
       
       <form (submit)="onSaveVitals(); $event.preventDefault()">
+        <!-- Urgent Level Priority (UX Highlight) -->
+        <div class="form-group" style="background-color: #f8fafc; padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--border-color); margin-bottom: 20px;">
+          <label class="form-label" style="font-weight: 700; font-size: 14.5px; margin-bottom: 10px;">🚨 ระดับความฉุกเฉินในการจัดคิวตรวจ (Triage Emergency Level)</label>
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;">
+            <label style="cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px 4px; border: 1.5px solid #2ecc71; border-radius: var(--radius-md); font-size: 12.5px; font-weight: bold; text-align: center;" 
+                   [style.background-color]="vitalsForm().triage_level === 'Green' ? '#2ecc71' : 'white'"
+                   [style.color]="vitalsForm().triage_level === 'Green' ? 'white' : '#2ecc71'">
+              <input type="radio" name="triage" value="Green" style="display:none;" 
+                     [ngModel]="vitalsForm().triage_level" 
+                     (ngModelChange)="vitalsForm.set({...vitalsForm(), triage_level: $event})" />
+              <span>🟢 ทั่วไป (Green)</span>
+            </label>
+            
+            <label style="cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px 4px; border: 1.5px solid #f1c40f; border-radius: var(--radius-md); font-size: 12.5px; font-weight: bold; text-align: center;" 
+                   [style.background-color]="vitalsForm().triage_level === 'Yellow' ? '#f1c40f' : 'white'"
+                   [style.color]="vitalsForm().triage_level === 'Yellow' ? 'black' : '#f1c40f'">
+              <input type="radio" name="triage" value="Yellow" style="display:none;" 
+                     [ngModel]="vitalsForm().triage_level" 
+                     (ngModelChange)="vitalsForm.set({...vitalsForm(), triage_level: $event})" />
+              <span>🟡 เฉียบพลัน (Yellow)</span>
+            </label>
+            
+            <label style="cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px 4px; border: 1.5px solid #e67e22; border-radius: var(--radius-md); font-size: 12.5px; font-weight: bold; text-align: center;" 
+                   [style.background-color]="vitalsForm().triage_level === 'Orange' ? '#e67e22' : 'white'"
+                   [style.color]="vitalsForm().triage_level === 'Orange' ? 'white' : '#e67e22'">
+              <input type="radio" name="triage" value="Orange" style="display:none;" 
+                     [ngModel]="vitalsForm().triage_level" 
+                     (ngModelChange)="vitalsForm.set({...vitalsForm(), triage_level: $event})" />
+              <span>🟠 เร่งด่วน (Orange)</span>
+            </label>
+            
+            <label style="cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px 4px; border: 1.5px solid #e74c3c; border-radius: var(--radius-md); font-size: 12.5px; font-weight: bold; text-align: center;" 
+                   [style.background-color]="vitalsForm().triage_level === 'Red' ? '#e74c3c' : 'white'"
+                   [style.color]="vitalsForm().triage_level === 'Red' ? 'white' : '#e74c3c'">
+              <input type="radio" name="triage" value="Red" style="display:none;" 
+                     [ngModel]="vitalsForm().triage_level" 
+                     (ngModelChange)="vitalsForm.set({...vitalsForm(), triage_level: $event})" />
+              <span>🔴 วิกฤตแซงคิว (Red)</span>
+            </label>
+          </div>
+          <div style="font-size: 11.5px; color: var(--text-secondary); margin-top: 8px;">
+            * คนไข้สีแดง (ฉุกเฉินวิกฤต) คิวตรวจจะได้รับการเลื่อนขึ้นเป็นลำดับที่ 1 ของห้องตรวจแพทย์โดยอัติโนมัติเพื่อแซงตรวจรักษาด่วน
+          </div>
+        </div>
+
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
           <div class="form-group">
-            <label class="form-label">น้ำหนัก (kg) <span style="color: var(--error);">*</span></label>
+            <label class="form-label">น้ำหนักคนไข้ (กิโลกรัม) <span style="color: var(--error);">*</span></label>
             <input type="number" step="0.1" class="form-input" [ngModel]="vitalsForm().weight" (ngModelChange)="vitalsForm.set({...vitalsForm(), weight: $event})" name="weight" required />
           </div>
           <div class="form-group">
-            <label class="form-label">ส่วนสูง (cm) <span style="color: var(--error);">*</span></label>
+            <label class="form-label">ส่วนสูงคนไข้ (เซนติเมตร) <span style="color: var(--error);">*</span></label>
             <input type="number" step="0.1" class="form-input" [ngModel]="vitalsForm().height" (ngModelChange)="vitalsForm.set({...vitalsForm(), height: $event})" name="height" required />
           </div>
         </div>
         
         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
           <div class="form-group">
-            <label class="form-label">ความดันบน (Systolic) <span style="color: var(--error);">*</span></label>
+            <label class="form-label">ความดันตัวบน (SYS) <span style="color: var(--error);">*</span></label>
             <input type="number" class="form-input" [ngModel]="vitalsForm().bp_systolic" (ngModelChange)="vitalsForm.set({...vitalsForm(), bp_systolic: $event})" name="bp_systolic" required />
           </div>
           <div class="form-group">
-            <label class="form-label">ความดันล่าง (Diastolic) <span style="color: var(--error);">*</span></label>
+            <label class="form-label">ความดันตัวล่าง (DIA) <span style="color: var(--error);">*</span></label>
             <input type="number" class="form-input" [ngModel]="vitalsForm().bp_diastolic" (ngModelChange)="vitalsForm.set({...vitalsForm(), bp_diastolic: $event})" name="bp_diastolic" required />
           </div>
           <div class="form-group">
-            <label class="form-label">ชีพจร (Pulse) <span style="color: var(--error);">*</span></label>
+            <label class="form-label">อัตราชีพจร (Pulse) <span style="color: var(--error);">*</span></label>
             <input type="number" class="form-input" [ngModel]="vitalsForm().pulse" (ngModelChange)="vitalsForm.set({...vitalsForm(), pulse: $event})" name="pulse" required />
           </div>
         </div>
         
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div style="display: grid; grid-template-columns: 1.2fr 0.8fr 1fr; gap: 12px;">
           <div class="form-group">
-            <label class="form-label">อุณหภูมิร่างกาย (°C) <span style="color: var(--error);">*</span></label>
+            <label class="form-label">วัดไข้/อุณหภูมิร่างกาย (°C) <span style="color: var(--error);">*</span></label>
             <input type="number" step="0.1" class="form-input" [ngModel]="vitalsForm().temperature" (ngModelChange)="vitalsForm.set({...vitalsForm(), temperature: $event})" name="temperature" required />
           </div>
           <div class="form-group">
-            <label class="form-label">ค่าออกซิเจนปลายนิ้ว (%) <span style="color: var(--error);">*</span></label>
+            <label class="form-label">ออกซิเจนปลายนิ้ว (%) <span style="color: var(--error);">*</span></label>
             <input type="number" class="form-input" [ngModel]="vitalsForm().oxygen_saturation" (ngModelChange)="vitalsForm.set({...vitalsForm(), oxygen_saturation: $event})" name="oxygen_saturation" required />
+          </div>
+          
+          <!-- Creatinine value for kidney warning (UX Highlight) -->
+          <div class="form-group">
+            <label class="form-label">ค่าไตของแล็บ (Creatinine)</label>
+            <input type="number" step="0.01" class="form-input" style="font-weight:600; color:var(--text-primary);" [ngModel]="vitalsForm().creatinine" (ngModelChange)="vitalsForm.set({...vitalsForm(), creatinine: $event})" name="creatinine" />
           </div>
         </div>
         
-        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 28px;">
           <button type="button" class="btn btn-secondary" (click)="closeModal()">ยกเลิก</button>
-          <button type="submit" class="btn btn-primary">บันทึกและส่งคิวเข้าพบแพทย์</button>
+          <button type="submit" class="btn btn-primary" style="padding: 10px 24px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>ส่งคิวตรวจคนไข้เข้าห้องตรวจแพทย์</span>
+          </button>
         </div>
       </form>
     </div>

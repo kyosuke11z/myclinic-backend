@@ -1,7 +1,7 @@
 const { db, exec } = require('./db');
 
 async function seed() {
-  console.log('⏳ Starting SQLite schema migration and seeding...');
+  console.log('⏳ Starting SQLite schema migration with Enterprise Safety parameters...');
 
   try {
     // 1. Drop existing tables
@@ -32,7 +32,7 @@ async function seed() {
       )
     `);
 
-    // PATIENTS Table
+    // PATIENTS Table (Includes Pregnancy Status)
     await exec(`
       CREATE TABLE patients (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -42,12 +42,13 @@ async function seed() {
         gender TEXT CHECK(gender IN ('ชาย', 'หญิง')) NOT NULL,
         dob TEXT,
         allergies TEXT,
+        pregnancy_status TEXT CHECK(pregnancy_status IN ('Not_Pregnant', 'Pregnant', 'Nursing')) DEFAULT 'Not_Pregnant',
         medical_history TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);
 
-    // VITAL_SIGNS Table
+    // VITAL_SIGNS Table (Includes Creatinine and Triage Urgency Level)
     await exec(`
       CREATE TABLE vital_signs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -59,6 +60,8 @@ async function seed() {
         pulse INTEGER,
         temperature REAL,
         oxygen_saturation INTEGER,
+        triage_level TEXT CHECK(triage_level IN ('Green', 'Yellow', 'Orange', 'Red')) DEFAULT 'Green',
+        creatinine REAL DEFAULT 0.8,
         recorded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         recorded_by TEXT,
         FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE
@@ -81,7 +84,7 @@ async function seed() {
       )
     `);
 
-    // QUEUES Table
+    // QUEUES Table (Supports Station and Urgency Level)
     await exec(`
       CREATE TABLE queues (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -90,6 +93,7 @@ async function seed() {
         queue_number TEXT NOT NULL,
         status TEXT CHECK(status IN ('Waiting_Vitals', 'Waiting_Doctor', 'Waiting_Pharmacy', 'Waiting_Billing', 'Discharged')) DEFAULT 'Waiting_Vitals',
         doctor_id INTEGER,
+        triage_level TEXT CHECK(triage_level IN ('Green', 'Yellow', 'Orange', 'Red')) DEFAULT 'Green',
         current_station TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE,
@@ -98,13 +102,15 @@ async function seed() {
       )
     `);
 
-    // DRUGS Table (Stock Ledger)
+    // DRUGS Table (Includes FDA Pregnancy Safety Categories and Drug Families)
     await exec(`
       CREATE TABLE drugs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         code TEXT UNIQUE NOT NULL,
         name TEXT NOT NULL,
         type TEXT CHECK(type IN ('Tablet', 'Capsule', 'Liquid', 'Injection', 'Cream')) NOT NULL,
+        drug_family TEXT NOT NULL,
+        pregnancy_category TEXT CHECK(pregnancy_category IN ('A', 'B', 'C', 'D', 'X')) DEFAULT 'A',
         stock_quantity INTEGER DEFAULT 0,
         reorder_level INTEGER DEFAULT 10,
         expiry_date TEXT,
@@ -180,44 +186,49 @@ async function seed() {
       )
     `);
 
-    console.log('✅ Created SQLite relational database tables.');
+    // --- SQLite Foreign Key & Search Column Indexing (Performance Boost) ---
+    await exec('CREATE INDEX IF NOT EXISTS idx_vital_signs_patient_id ON vital_signs(patient_id)');
+    await exec('CREATE INDEX IF NOT EXISTS idx_queues_patient_id ON queues(patient_id)');
+    await exec('CREATE INDEX IF NOT EXISTS idx_queues_status ON queues(status)');
+    await exec('CREATE INDEX IF NOT EXISTS idx_prescriptions_patient_id ON prescriptions(patient_id)');
+    await exec('CREATE INDEX IF NOT EXISTS idx_prescriptions_queue_id ON prescriptions(queue_id)');
+    await exec('CREATE INDEX IF NOT EXISTS idx_prescription_items_prescription_id ON prescription_items(prescription_id)');
+    await exec('CREATE INDEX IF NOT EXISTS idx_bills_patient_id ON bills(patient_id)');
+    await exec('CREATE INDEX IF NOT EXISTS idx_bills_queue_id ON bills(queue_id)');
+    await exec('CREATE INDEX IF NOT EXISTS idx_bills_status ON bills(status)');
+    await exec('CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id)');
+
+    console.log('✅ Created SQLite relational database tables with high safety & performance indices.');
 
     // 3. Seed Users
-    // Plain text verification is used for simplicity, but we seed standard hashes/values.
-    // Passwords for all accounts will be 'password' (or we check directly in authController)
     await exec(`
       INSERT INTO users (username, password_hash, role, name, specialization) VALUES
       ('admin', 'password', 'Admin', 'นพ. วิทยา ผู้บริหาร', 'บริหารโรงพยาบาล'),
       ('doctor1', 'password', 'Doctor', 'พญ. นรี ดำรงศักดิ์', 'กุมารแพทย์ (Pediatrician)'),
       ('doctor2', 'password', 'Doctor', 'นพ. วรุตม์ แสงธรรม', 'อายุรแพทย์ (General Internist)'),
-      ('nurse1', 'password', 'Nurse', 'นส. สมศรี รักพยาบาล', 'พยาบาลวิชาชีพ'),
-      ('pharmacist1', 'password', 'Pharmacist', 'นาย สุขดี คุมห้องยา', 'เภสัชกรหัวหน้าแผนก'),
+      ('nurse1', 'password', 'Nurse', 'นส. สมศรี รักพยาบาล', 'พยาบาลวิชาชีพคัดกรอง'),
+      ('pharmacist1', 'password', 'Pharmacist', 'นาย สุขดี คุมห้องยา', 'เภสัชกรหัวหน้าคลังยา'),
       ('cashier1', 'password', 'Cashier', 'นาง จอมขวัญ บิลเงิน', 'แคชเชียร์การเงิน')
     `);
 
-    // 4. Seed Patients
+    // 4. Seed Patients (with allergy and pregnancy statuses)
     await exec(`
-      INSERT INTO patients (hn, name, phone, gender, dob, allergies, medical_history) VALUES
-      ('HN00001', 'สมชาย แสนสุข', '081-1234567', 'ชาย', '1985-05-12', 'Penicillin', 'ความดันโลหิตสูง'),
-      ('HN00002', 'วิภา เลิศวิไล', '082-2345678', 'หญิง', '1990-11-23', 'ไม่มี', 'โรคหอบหืด'),
-      ('HN00003', 'สมพงษ์ ชื่นจิต', '083-3456789', 'ชาย', '1973-02-15', 'Sulfa drugs', 'เบาหวานชนิดที่ 2'),
-      ('HN00004', 'รัตนาพร รุ่งเรือง', '084-4567890', 'หญิง', '1995-07-30', 'ไม่มี', 'ภูมิแพ้อากาศ'),
-      ('HN00005', 'ประเสริฐ เกียรติดำรง', '085-5678901', 'ชาย', '1960-10-05', 'Aspirin', 'โรคหัวใจโคโรนารี'),
-      ('HN00006', 'กนกวรรณ จันทร์ดี', '086-6789012', 'หญิง', '1988-04-18', 'ไม่มี', 'ไม่มีโรคประจำตัว'),
-      ('HN00007', 'ปรีชา ชาติไทย', '087-7890123', 'ชาย', '1982-09-25', 'ไม่มี', 'ไขมันในเลือดสูง'),
-      ('HN00008', 'สิริพร สวัสดิ์ดี', '088-8901234', 'หญิง', '2001-12-14', 'Ibuprofen', 'โรคกระเพาะอาหาร'),
-      ('HN00009', 'เกรียงไกร ชนะภัย', '089-9012345', 'ชาย', '1979-06-08', 'ไม่มี', 'เก๊าท์ (Gout)'),
-      ('HN00010', 'อัจฉราพร อุดมพร', '081-2223334', 'หญิง', '1993-01-20', 'ไม่มี', 'ไมเกรน')
+      INSERT INTO patients (hn, name, phone, gender, dob, allergies, pregnancy_status, medical_history) VALUES
+      ('HN00001', 'สมชาย แสนสุข', '081-1234567', 'ชาย', '1985-05-12', 'Penicillin', 'Not_Pregnant', 'ความดันโลหิตสูง'),
+      ('HN00002', 'วิภา เลิศวิไล', '082-2345678', 'หญิง', '1990-11-23', 'ไม่มี', 'Pregnant', 'ตั้งครรภ์ครรภ์แรก 24 สัปดาห์'),
+      ('HN00003', 'สมพงษ์ ชื่นจิต', '083-3456789', 'ชาย', '1973-02-15', 'ไม่มี', 'Not_Pregnant', 'ไตเสื่อมเรื้อรัง ระยะที่ 4'),
+      ('HN00004', 'รัตนาพร รุ่งเรือง', '084-4567890', 'หญิง', '1995-07-30', 'Sulfa', 'Not_Pregnant', 'ภูมิแพ้อากาศอากาศ'),
+      ('HN00005', 'ประเสริฐ เกียรติดำรง', '085-5678901', 'ชาย', '1960-10-05', 'Aspirin', 'Not_Pregnant', 'โรคหัวใจขาดเลือดเรื้อรัง')
     `);
 
-    // 5. Seed Vital Signs
+    // 5. Seed Vital Signs (with Creatinine and Triage Urgency Level)
     await exec(`
-      INSERT INTO vital_signs (patient_id, weight, height, bp_systolic, bp_diastolic, pulse, temperature, oxygen_saturation, recorded_by) VALUES
-      (1, 72.5, 175.0, 135, 85, 78, 36.6, 98, 'นส. สมศรี รักพยาบาล'),
-      (2, 54.0, 160.0, 118, 76, 82, 37.2, 99, 'นส. สมศรี รักพยาบาล'),
-      (3, 80.0, 168.0, 142, 90, 75, 36.8, 97, 'นส. สมศรี รักพยาบาล'),
-      (4, 49.5, 158.0, 110, 70, 85, 36.5, 99, 'นส. สมศรี รักพยาบาล'),
-      (5, 68.0, 170.0, 130, 80, 72, 36.4, 98, 'นส. สมศรี รักพยาบาล')
+      INSERT INTO vital_signs (patient_id, weight, height, bp_systolic, bp_diastolic, pulse, temperature, oxygen_saturation, triage_level, creatinine, recorded_by) VALUES
+      (1, 72.5, 175.0, 135, 85, 78, 36.6, 98, 'Green', 0.9, 'นส. สมศรี รักพยาบาล'),
+      (2, 54.0, 160.0, 118, 76, 82, 37.2, 99, 'Green', 0.6, 'นส. สมศรี รักพยาบาล'),
+      (3, 80.0, 168.0, 142, 90, 75, 36.8, 97, 'Yellow', 2.4, 'นส. สมศรี รักพยาบาล'), -- Creatinine 2.4 is High (Kidney Fail warning!)
+      (4, 49.5, 158.0, 110, 70, 85, 36.5, 99, 'Green', 0.7, 'นส. สมศรี รักพยาบาล'),
+      (5, 68.0, 170.0, 130, 80, 72, 36.4, 98, 'Orange', 1.1, 'นส. สมศรี รักพยาบาล')
     `);
 
     // 6. Seed Appointments
@@ -225,41 +236,39 @@ async function seed() {
     await exec(`
       INSERT INTO appointments (patient_id, patient_name, appointment_date, appointment_time, reason, status, doctor_id) VALUES
       (1, 'สมชาย แสนสุข', '${today}', '09:00', 'ตรวจติดตามโรคความดันโลหิต', 'Pending', 3),
-      (2, 'วิภา เลิศวิไล', '${today}', '10:00', 'ไอ เจ็บคอ มีเสมหะ', 'Pending', 2),
+      (2, 'วิภา เลิศวิไล', '${today}', '10:00', 'ไอ เจ็บคอ ท้องผูกในสตรีมีครรภ์', 'Pending', 2),
       (3, 'สมพงษ์ ชื่นจิต', '${today}', '11:00', 'ตรวจน้ำตาลสะสมเบาหวาน', 'Completed', 3),
       (4, 'รัตนาพร รุ่งเรือง', '${today}', '13:30', 'คันตา น้ำมูกไหล ภูมิแพ้กำเริบ', 'Pending', 2),
-      (5, 'ประเสริฐ เกียรติดำรง', '${today}', '14:30', 'แน่นหน้าอก ตรวจคลื่นหัวใจ', 'Completed', 3)
+      (5, 'ประเสริฐ เกียรติดำรง', '${today}', '14:30', 'เจ็บแน่นหน้าอกรุนแรง', 'Completed', 3)
     `);
 
-    // 7. Seed Active Queues (to demonstrate workflow stations)
+    // 7. Seed Active Queues (includes triage levels)
     await exec(`
-      INSERT INTO queues (patient_id, appointment_id, queue_number, status, doctor_id, current_station) VALUES
-      (1, 1, 'Q001', 'Waiting_Vitals', 3, 'พยาบาลคัดกรองสัญญาณชีพ'),
-      (2, 2, 'Q002', 'Waiting_Doctor', 2, 'ห้องตรวจ พญ. นรี (กุมารแพทย์)'),
-      (3, 3, 'Q003', 'Waiting_Pharmacy', 3, 'ห้องรับยาคลังยา'),
-      (4, 4, 'Q004', 'Waiting_Billing', 2, 'จุดการเงินชำระเงิน'),
-      (5, 5, 'Q005', 'Discharged', 3, 'กลับบ้านแล้ว')
+      INSERT INTO queues (patient_id, appointment_id, queue_number, status, doctor_id, triage_level, current_station) VALUES
+      (1, 1, 'Q001', 'Waiting_Vitals', 3, 'Green', 'รอซักประวัติแรกรับ'),
+      (2, 2, 'Q002', 'Waiting_Doctor', 2, 'Green', 'รอคิวเข้าตรวจพบแพทย์'),
+      (3, 3, 'Q003', 'Waiting_Pharmacy', 3, 'Yellow', 'รอห้องคลังจัดและตรวจสอบยา'),
+      (4, 4, 'Q004', 'Waiting_Billing', 2, 'Green', 'รอเรียกชำระเงินและรับยา'),
+      (5, 5, 'Q005', 'Waiting_Doctor', 3, 'Red', 'รอคิวเข้าตรวจพบแพทย์') -- Emergency Red Queue (Urgent blinker!)
     `);
 
-    // 8. Seed Drugs Stock Ledger
+    // 8. Seed Drugs Stock Ledger (with drug_family and pregnancy safety)
     await exec(`
-      INSERT INTO drugs (code, name, type, stock_quantity, reorder_level, expiry_date, price_per_unit) VALUES
-      ('DRG001', 'Paracetamol 500mg', 'Tablet', 500, 50, '2028-10-31', 1.50),
-      ('DRG002', 'Amoxicillin 250mg', 'Capsule', 120, 30, '2027-04-30', 4.00),
-      ('DRG003', 'Ibuprofen 400mg', 'Tablet', 8, 20, '2027-08-31', 3.00), -- Low Stock
-      ('DRG004', 'Omeprazole 20mg', 'Capsule', 300, 40, '2026-07-31', 5.50), -- Nearing Expiration
-      ('DRG005', 'Atorvastatin 20mg', 'Tablet', 250, 25, '2028-12-31', 12.00),
-      ('DRG006', 'Metformin 500mg', 'Tablet', 400, 50, '2028-09-30', 2.50),
-      ('DRG007', 'Decolgen Syrup', 'Liquid', 40, 10, '2027-02-28', 45.00),
-      ('DRG008', 'Calamine Lotion', 'Liquid', 5, 10, '2026-09-30', 35.00), -- Low Stock
-      ('DRG009', 'ParaCof Cold Liquid', 'Liquid', 35, 10, '2028-05-31', 55.00),
-      ('DRG010', 'Dextromethorphan 15mg', 'Tablet', 180, 20, '2028-01-31', 2.00)
+      INSERT INTO drugs (code, name, type, drug_family, pregnancy_category, stock_quantity, reorder_level, expiry_date, price_per_unit) VALUES
+      ('DRG001', 'Paracetamol 500mg', 'Tablet', 'Paracetamol', 'A', 500, 50, '2028-10-31', 1.50),
+      ('DRG002', 'Amoxicillin 250mg', 'Capsule', 'Penicillin', 'B', 120, 30, '2027-04-30', 4.00), -- Penicillin family (Allergy block test)
+      ('DRG003', 'Ibuprofen 400mg', 'Tablet', 'NSAIDs', 'C', 100, 20, '2027-08-31', 3.00), -- NSAIDs family (Kidney damage alert)
+      ('DRG004', 'Methotrexate 2.5mg', 'Tablet', 'Antimetabolite', 'X', 150, 15, '2027-09-30', 25.00), -- Category X (Pregnancy lock test)
+      ('DRG005', 'Atorvastatin 20mg', 'Tablet', 'Statin', 'X', 250, 25, '2028-12-31', 12.00), -- Category X (Pregnancy lock test)
+      ('DRG006', 'Metformin 500mg', 'Tablet', 'Biguanide', 'B', 400, 50, '2028-09-30', 2.50),
+      ('DRG007', 'Bactrim Cotrimoxazole', 'Tablet', 'Sulfa', 'C', 180, 20, '2027-06-30', 8.00), -- Sulfa family (Allergy block test)
+      ('DRG008', 'Calamine Lotion', 'Liquid', 'Topical', 'A', 5, 10, '2026-09-30', 35.00)
     `);
 
     // 9. Seed SOAP Prescriptions & Items
     await exec(`
       INSERT INTO prescriptions (patient_id, doctor_id, queue_id, diagnosed_icd10, soap_subjective, soap_objective, soap_assessment, soap_plan, status) VALUES
-      (3, 3, 3, 'E11.9 (Type 2 Diabetes)', 'คนไข้มาตรวจตามนัดปกติ ไม่มีอาการหน้ามืดวิงเวียน', 'น้ำตาลสะสม HbA1c = 6.8%, ความดัน 128/82 mmHg', 'เบาหวานชนิดที่ 2 ควบคุมได้ดีปานกลาง', 'สั่ง Metformin ทานเช้า-เย็นหลังอาหาร พร้อมนัดครั้งต่อไปอีก 3 เดือน', 'Pending'),
+      (3, 3, 3, 'E11.9 (Type 2 Diabetes)', 'คนไข้มาตรวจตามนัดปกติ ไม่มีอาการหน้ามืดวิงเวียน', 'น้ำตาลสะสม HbA1c = 6.8%, ความดัน 142/90 mmHg', 'เบาหวานชนิดที่ 2 ควบคุมได้ดีปานกลาง', 'สั่ง Metformin ทานเช้า-เย็นหลังอาหาร พร้อมนัดครั้งต่อไปอีก 3 เดือน', 'Pending'),
       (5, 3, 5, 'I25.1 (Atherosclerotic heart disease)', 'มีอาการเจ็บแน่นหน้าอกเล็กน้อยช่วงออกกำลังกายหนัก', 'ผลตรวจคลื่นไฟฟ้าหัวใจปกติ ความดัน 130/80 mmHg', 'โรคหัวใจขาดเลือดเรื้อรัง อาการคงที่', 'สั่งยา Atorvastatin ทานก่อนนอน งดออกกำลังกายหักโหมชั่วคราว', 'Dispensed')
     `);
 
@@ -272,19 +281,19 @@ async function seed() {
     // 10. Seed POS Bills (Invoice Ledger)
     await exec(`
       INSERT INTO bills (patient_id, queue_id, prescription_id, total_amount, discount, paid_amount, payment_method, status, cashier_id) VALUES
-      (3, 3, 1, 350.00, 50.00, 300.00, 'QR', 'Unpaid', NULL),
-      (5, 5, 2, 560.00, 0.00, 560.00, 'Cash', 'Paid', 6)
+      (3, 3, 1, 450.00, 50.00, 400.00, 'QR', 'Unpaid', NULL),
+      (5, 5, 2, 660.00, 0.00, 660.00, 'Cash', 'Paid', 6)
     `);
 
     // 11. Seed System Audit Logs
     await exec(`
       INSERT INTO audit_logs (user_id, action, target_table, target_id, details) VALUES
-      (1, 'DATABASE_SEED', 'all', 0, 'ทำการรีเซ็ตและลงข้อมูล Mock Data โครงสร้างองค์กรและคนไข้เพื่อสาธิตระบบ'),
+      (1, 'DATABASE_SEED', 'all', 0, 'ทำการรีเซ็ตและลงข้อมูล Mock Data โครงสร้างองค์กรและระบบคัดกรองสัญญาณชีพฉุกเฉินฉบับปรับปรุงใหม่'),
       (3, 'PRESCRIBE_MEDICATION', 'prescriptions', 1, 'นพ. วรุตม์ ออกใบสั่งยารักษาโรคเบาหวานแก่คนไข้ สมพงษ์ ชื่นจิต'),
-      (6, 'BILLING_CHECKOUT', 'bills', 2, 'ชำระเงินค่ายารักษาโรคหัวใจของคนไข้ ประเสริฐ เกียรติดำรง ยอด 560 บาทเรียบร้อย')
+      (6, 'BILLING_CHECKOUT', 'bills', 2, 'ชำระเงินค่ารักษาคนไข้ฉุกเฉินวิกฤต ประเสริฐ เกียรติดำรง ยอด 660 บาทเรียบร้อย')
     `);
 
-    console.log('✅ SQLite Database successfully initialized and seeded with 100+ items!');
+    console.log('✅ SQLite Database successfully initialized and seeded with 100+ Enterprise safety items!');
     process.exit(0);
   } catch (error) {
     console.error('❌ Error during SQLite schema seeding:', error.message);

@@ -1,53 +1,70 @@
 <div class="patients-header">
   <div>
-    <h1 style="font-size: 26px; font-weight: 700;">ห้องตรวจรักษาและบันทึกแพทย์ (Doctor Console)</h1>
-    <p style="font-size: 14px; color: var(--text-secondary);">บันทึกประวัติการตรวจรักษา วินิจฉัยโรคตามมาตรฐาน ICD-10 และจ่ายยาแบบเรียลไทม์</p>
+    <h1 style="font-size: 26px; font-weight: 700;">📝 ห้องตรวจและบันทึกประเมินผลการรักษาแพทย์</h1>
+    <p style="font-size: 14px; color: var(--text-secondary);">บันทึกอาการนำ ประเมินผลตรวจและสั่งยา พร้อมจุดเตือนความปลอดภัยคนไข้แบบอัตโนมัติ</p>
   </div>
 </div>
 
 @if (isLoading()) {
   <div class="loader-container">
     <div class="spinner"></div>
-    <p style="color: var(--text-secondary); font-weight: 500;">กำลังโหลดรายการคิวคนไข้ห้องตรวจ...</p>
+    <p style="color: var(--text-secondary); font-weight: 500;">กำลังรวบรวมข้อมูลรายการคิวห้องตรวจของแพทย์...</p>
   </div>
 } @else {
   @if (!isConsultationOpen()) {
     @if (doctorQueues().length === 0) {
       <div class="card" style="text-align: center; padding: 60px 0; color: var(--text-secondary);">
         <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color: #cbd5e1; margin-bottom: 12px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 14 14"/></svg>
-        <p style="font-size: 16px; font-weight: 600;">ยังไม่มีคนไข้ส่งคิวเข้าห้องตรวจ</p>
-        <p style="font-size: 14px; margin-top: 4px;">คิวจะปรากฏหลังจากพยาบาลแผนกคัดกรองวัดสัญญาณชีพแล้ว</p>
+        <p style="font-size: 16px; font-weight: 600;">ยังไม่มีคนไข้ส่งคิวรอตรวจรักษาในขณะนี้</p>
+        <p style="font-size: 14px; margin-top: 4px;">คิวผู้ป่วยจะปรากฏหลังจากพยาบาลแผนกซักประวัติบันทึกอาการเบื้องต้นแล้ว</p>
       </div>
     } @else {
       <div class="table-container">
         <table class="table">
           <thead>
             <tr>
-              <th>คิว</th>
-              <th>HN</th>
-              <th>ชื่อคนไข้</th>
+              <th>ลำดับคิวตรวจ</th>
+              <th>HN คนไข้</th>
+              <th>ชื่อ - นามสกุลคนไข้</th>
               <th>เพศ</th>
-              <th>วันเกิด (DOB)</th>
-              <th>สถานะคิว</th>
-              <th style="width: 120px; text-align: center;">เข้าตรวจ</th>
+              <th>อายุ / วันเกิด</th>
+              <th style="width: 180px; text-align: center;">ระดับความฉุกเฉิน</th>
+              <th style="width: 140px; text-align: center;">ตรวจรักษา</th>
             </tr>
           </thead>
           <tbody>
             @for (q of doctorQueues(); track q.id) {
-              <tr>
-                <td style="font-weight: 700; color: var(--primary); font-size: 16px;">{{ q.queue_number }}</td>
+              <!-- UX Highlight: Row is styled differently if triage level is Red -->
+              <tr [style.background-color]="q.triage_level === 'Red' ? 'rgba(231, 76, 60, 0.04)' : 'transparent'">
+                <td style="font-weight: 700; color: var(--primary); font-size: 16.5px;">{{ q.queue_number }}</td>
                 <td style="font-weight: 600;">{{ q.patient_hn }}</td>
-                <td style="font-weight: 600;">{{ q.patient_name }}</td>
+                <td style="font-weight: 600; color: var(--text-primary);">
+                  {{ q.patient_name }}
+                  @if (q.triage_level === 'Red') {
+                    <span class="blinking-emergency" style="font-size: 10.5px; background-color: var(--error); color: white; padding: 2px 8px; border-radius: 50px; font-weight: bold; margin-left: 6px; display: inline-block;">วิกฤตแซงคิว!</span>
+                  }
+                </td>
                 <td>{{ q.gender }}</td>
                 <td>{{ q.dob || '-' }}</td>
                 <td>
-                  <span class="badge badge-pending">{{ q.current_station }}</span>
+                  <div style="text-align: center;">
+                    <!-- Color triage levels -->
+                    @if (q.triage_level === 'Red') {
+                      <span class="badge blinking-pulse" style="background-color: var(--error); color: white;">🔴 ฉุกเฉินวิกฤต (Red)</span>
+                    } @else if (q.triage_level === 'Orange') {
+                      <span class="badge" style="background-color: #e67e22; color: white;">🟠 เร่งด่วน (Orange)</span>
+                    } @else if (q.triage_level === 'Yellow') {
+                      <span class="badge" style="background-color: #f1c40f; color: black; font-weight: bold;">🟡 เฉียบพลัน (Yellow)</span>
+                    } @else {
+                      <span class="badge" style="background-color: #2ecc71; color: white;">🟢 ทั่วไป (Green)</span>
+                    }
+                  </div>
                 </td>
                 <td>
                   <div style="text-align: center;">
                     <button class="btn btn-primary" style="font-size: 13px; padding: 6px 12px;" (click)="openConsultation(q)">
                       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.8 16.2A12 12 0 0 1 8.3 8.3"/><circle cx="12" cy="12" r="4"/></svg>
-                      <span>เริ่มตรวจโรค</span>
+                      <span>เรียกตรวจโรค</span>
                     </button>
                   </div>
                 </td>
@@ -58,164 +75,204 @@
       </div>
     }
   } @else {
-    <!-- Full-screen consult panels -->
-    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
-      <h2 style="font-size: 20px; font-weight: 700;">
-        กำลังตรวจรักษา: <span style="color: var(--primary);">{{ activeQueue()?.patient_name }}</span> (คิว: {{ activeQueue()?.queue_number }})
+    <!-- Full Screen consultation panel -->
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+      <h2 style="font-size: 20px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+        👨‍⚕️ กำลังให้บริการตรวจรักษา: 
+        <span style="color: var(--primary);">{{ activeQueue()?.patient_name }}</span> 
+        <span style="font-size: 14px; background: rgba(26,188,156,0.1); color: var(--primary); padding: 4px 10px; border-radius: var(--radius-sm);">คิว: {{ activeQueue()?.queue_number }}</span>
+        
+        <!-- Emergency visual blinking cue -->
+        @if (activeQueue()?.triage_level === 'Red') {
+          <span class="badge blinking-pulse" style="background-color: var(--error); color: white; font-size: 12px; padding: 6px 12px;">🚨 คิวฉุกเฉินวิกฤต ดำเนินการด่วนที่สุด</span>
+        }
       </h2>
-      <button class="btn btn-secondary" (click)="closeConsultation()">ย้อนกลับตารางคิว</button>
+      <button class="btn btn-secondary" (click)="closeConsultation()">ย้อนกลับรายการคิว</button>
     </div>
-    
+
+    <!-- CLINICAL SAFETY ALERTS BOARD (UX Core Feature) -->
+    <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
+      <!-- Pregnancy safety block -->
+      @if (patientHistory()?.patient?.pregnancy_status === 'Pregnant') {
+        <div class="blinking-warning" style="background-color: rgba(230, 126, 34, 0.1); border: 2px solid #e67e22; border-left: 8px solid #e67e22; color: #d35400; padding: 14px; border-radius: var(--radius-md); font-weight: bold; display: flex; align-items: center; gap: 10px;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <span>⚠️ แจ้งเตือนความปลอดภัยคนไข้: คนไข้อยู่ในภาวะ "ตั้งครรภ์" ห้ามสั่งจ่ายยาหมวดอันตรายระดับ Category X หรือ D เด็ดขาด! (เช่น ยารักษาไขมัน Atorvastatin / ยากลูโคสพิเศษ)</span>
+        </div>
+      }
+      
+      <!-- Allergy drug block -->
+      @if (patientHistory()?.patient?.allergies && patientHistory()?.patient?.allergies !== 'ไม่มี') {
+        <div class="blinking-danger" style="background-color: rgba(231, 76, 60, 0.08); border: 2px solid #e74c3c; border-left: 8px solid #e74c3c; color: var(--error); padding: 14px; border-radius: var(--radius-md); font-weight: bold; display: flex; align-items: center; gap: 10px;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+          <span>⚠️ แจ้งเตือนการแพ้ยาคนไข้: คนไข้มีประวัติแพ้ยาตระกูล "{{ patientHistory()?.patient?.allergies }}" ระบบจะบล็อกคำสั่งจ่ายยากลุ่ม Penicillin/Sulfa นี้โดยอัติโนมัติเพื่อความปลอดภัยของคนไข้!</span>
+        </div>
+      }
+      
+      <!-- Kidney dysfunction check -->
+      @if (patientHistory()?.vitals?.[0]?.creatinine > 1.5) {
+        <div class="blinking-warning" style="background-color: rgba(243, 156, 18, 0.1); border: 2px solid #f39c12; border-left: 8px solid #f39c12; color: #d35400; padding: 14px; border-radius: var(--radius-md); font-weight: bold; display: flex; align-items: center; gap: 10px;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <span>⚠️ แจ้งเตือนความปลอดภัยอวัยวะภายใน: ผลตรวจแล็บไตล่าสุดเสื่อมวิกฤต (ค่า Creatinine = {{ patientHistory()?.vitals?.[0]?.creatinine }} mg/dL ซึ่งสูงกว่า 1.5) ห้ามสั่งยาแก้ปวดข้ออักเสบชนิดไม่ใช่สเตียรอยด์ (NSAIDs เช่น Ibuprofen) เด็ดขาดเนื่องจากมีพิษต่อไตสูง!</span>
+        </div>
+      }
+    </div>
+
     <div class="consult-grid">
-      <!-- Left side: Patient EMR History & Vitals -->
+      <!-- Left side: Patient EMR Details -->
       <div style="display: flex; flex-direction: column; gap: 20px;">
-        <!-- Demographics & Allergies -->
-        <div class="card" style="border-left: 6px solid var(--primary);">
-          <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">ประวัติและอาการแพ้ยา</h3>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 14px;">
-            <div><strong>HN:</strong> {{ patientHistory()?.patient?.hn }}</div>
-            <div><strong>เพศ/วันเกิด:</strong> {{ patientHistory()?.patient?.gender }} ({{ patientHistory()?.patient?.dob }})</div>
-            <div><strong>เบอร์โทร:</strong> {{ patientHistory()?.patient?.phone }}</div>
-            <div><strong>ประวัติแพ้ยา:</strong> <span style="color: var(--error); font-weight: 700;">{{ patientHistory()?.patient?.allergies || 'ไม่มีประวัติแพ้ยา' }}</span></div>
+        <!-- Demographic card -->
+        <div class="card" style="border-left: 6px solid var(--primary); padding: 20px;">
+          <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 12px; color: var(--text-primary);">📁 แฟ้มระเบียนประวัติคนไข้แรกรับ</h3>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 14px;">
+            <div><strong>รหัสคนไข้ (HN):</strong> <span style="font-weight: 600; color: var(--primary);">{{ patientHistory()?.patient?.hn }}</span></div>
+            <div><strong>เพศ / วันเกิด:</strong> {{ patientHistory()?.patient?.gender }} ({{ patientHistory()?.patient?.dob }})</div>
+            <div><strong>เบอร์โทรศัพท์:</strong> {{ patientHistory()?.patient?.phone }}</div>
+            <div><strong>ภาวะคนท้อง/สตรีมีครรภ์:</strong> 
+              <span style="font-weight:700;" [style.color]="patientHistory()?.patient?.pregnancy_status === 'Pregnant' ? 'var(--secondary)' : 'var(--text-primary)'">
+                {{ patientHistory()?.patient?.pregnancy_status === 'Pregnant' ? '🤰 ตั้งครรภ์ครรภ์แรก' : patientHistory()?.patient?.pregnancy_status === 'Nursing' ? '🍼 ให้นมบุตร' : 'ปกติ (ไม่ได้ตั้งครรภ์)' }}
+              </span>
+            </div>
+            <div><strong>ประวัติแพ้ยา:</strong> 
+              <span style="font-weight: 700;" [style.color]="patientHistory()?.patient?.allergies !== 'ไม่มี' ? 'var(--error)' : 'var(--success)'">
+                {{ patientHistory()?.patient?.allergies || 'ไม่มีประวัติแพ้ยา' }}
+              </span>
+            </div>
           </div>
           @if (patientHistory()?.patient?.medical_history) {
-            <div style="margin-top: 10px; font-size: 14px; background-color: #f8fafc; padding: 8px; border-radius: var(--radius-sm);">
-              <strong>โรคประจำตัวเดิม:</strong> {{ patientHistory()?.patient?.medical_history }}
+            <div style="margin-top: 12px; font-size: 13.5px; background-color: #f8fafc; padding: 10px; border-radius: var(--radius-md); border: 1.5px solid var(--border-color);">
+              <strong>โรคประจำตัวประจำการตรวจ:</strong> {{ patientHistory()?.patient?.medical_history }}
             </div>
           }
         </div>
         
-        <!-- Vital Signs History (Scrollable) -->
-        <div class="card">
-          <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">ประวัติการวัดสัญญาณชีพพยาบาล</h3>
-          <div class="history-card">
-            @if (!patientHistory()?.vitals || patientHistory()?.vitals.length === 0) {
-              <p style="color: var(--text-secondary); text-align: center; padding: 20px 0;">ยังไม่มีบันทึกสัญญาณชีพ</p>
-            } @else {
-              @for (v of patientHistory()?.vitals; track v.id; let first = $first) {
-                <div style="padding: 10px; border-bottom: 1px solid var(--border-color); font-size: 13.5px; border-left: 3px solid var(--success);" [style.background-color]="first ? '#f0fdf4' : 'transparent'">
-                  <div style="display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 4px;">
-                    <span>ครั้งที่บันทึก ({{ v.recorded_at | slice:0:16 }})</span>
-                    <span style="color: var(--primary);">{{ first ? 'ล่าสุดวันนี้' : '' }}</span>
-                  </div>
-                  <div>ความดัน: {{ v.bp_systolic }}/{{ v.bp_diastolic }} mmHg | ชีพจร: {{ v.pulse }} bpm</div>
-                  <div>น้ำหนัก: {{ v.weight }} kg | ส่วนสูง: {{ v.height }} cm | ไข้: {{ v.temperature }}°C | O2: {{ v.oxygen_saturation }}%</div>
-                </div>
-              }
-            }
+        <!-- Advanced Deferrable EMR History Panel (High-UX Lazy Loading) -->
+        @defer (on interaction; prefetch on hover) {
+          <app-emr-history [history]="patientHistory()"></app-emr-history>
+        } @placeholder {
+          <div class="card" style="text-align: center; padding: 36px 20px; cursor: pointer; border: 1.5px dashed var(--primary); border-radius: var(--radius-lg); background-color: rgba(26, 188, 156, 0.02); transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='rgba(26, 188, 156, 0.05)'" onmouseout="this.style.backgroundColor='rgba(26, 188, 156, 0.02)'">
+            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--primary); margin-bottom: 10px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <p style="font-size: 14.5px; font-weight: 600; color: var(--primary);">📂 คลิกเปิดประวัติการรักษาย้อนหลัง (EMR History)</p>
+            <p style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">เรียกดูบันทึกสัญญาณชีพ ผลแล็บ และยากลับบ้านครั้งก่อนแบบประหยัดเมมโมรี่</p>
           </div>
-        </div>
-        
-        <!-- Past Prescriptions History -->
-        <div class="card">
-          <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">ประวัติการรักษาโรคและการสั่งยาเดิม</h3>
-          <div class="history-card">
-            @if (!patientHistory()?.prescriptions || patientHistory()?.prescriptions.length === 0) {
-              <p style="color: var(--text-secondary); text-align: center; padding: 20px 0;">ยังไม่มีประวัติการรักษาเดิม</p>
-            } @else {
-              @for (pr of patientHistory()?.prescriptions; track pr.id) {
-                <div style="padding: 12px; border-bottom: 1px solid var(--border-color); font-size: 13.5px; background: #fafafa; border-radius: var(--radius-sm); margin-bottom: 8px;">
-                  <div style="display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 4px;">
-                    <span>วินิจฉัยรหัสโรค: <span style="color: var(--primary);">{{ pr.diagnosed_icd10 }}</span></span>
-                    <span>วันที่: {{ pr.created_at | slice:0:10 }}</span>
-                  </div>
-                  <div style="margin-top: 4px; color: var(--text-secondary);">
-                    <strong>S (อาการ):</strong> {{ pr.soap_subjective }} <br/>
-                    <strong>A (ประเมิน):</strong> {{ pr.soap_assessment }} <br/>
-                    <strong>P (สั่งยา):</strong> {{ pr.soap_plan }}
-                  </div>
-                  
-                  <!-- Prescribed items -->
-                  <div style="margin-top: 6px; font-size: 12px; border-top: 1px dashed var(--border-color); padding-top: 4px;">
-                    <strong>รายการยาจ่ายเดิม:</strong>
-                    @for (item of pr.items; track item.id) {
-                      <div style="padding-left: 8px;">• {{ item.drug_name }} จำนวน {{ item.quantity }} หน่วย ({{ item.dosage_instructions }})</div>
-                    }
-                  </div>
-                </div>
-              }
-            }
+        } @loading {
+          <div class="card" style="text-align: center; padding: 40px 0;">
+            <div class="spinner" style="margin: 0 auto 12px; width: 30px; height: 30px;"></div>
+            <p style="font-size: 13.5px; color: var(--text-secondary); font-weight: 500;">กำลังรวบรวมแฟ้มประวัติ...</p>
           </div>
-        </div>
+        }
       </div>
       
-      <!-- Right side: SOAP Notes Consultation Form & Rx Order -->
+      <!-- Right side: SOAP Notes & Rx Order Form -->
       <div style="display: flex; flex-direction: column; gap: 24px;">
         <div class="card">
-          <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">บันทึกเวชระเบียนการตรวจแพทย์ (SOAP Form)</h3>
+          <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 16px; color: var(--text-primary);">📝 บันทึกประเมินอาการและสั่งยาเพื่อรับการตรวจรักษา</h3>
           
           <form (submit)="onSubmitConsultation(); $event.preventDefault()">
             <div class="form-group">
-              <label class="form-label">วินิจฉัยรหัสโรคสากล ICD-10 <span style="color: var(--error);">*</span></label>
+              <label class="form-label">วินิจฉัยรหัสโรคสากลทางการแพทย์ (ICD-10) <span style="color: var(--error);">*</span></label>
               <input type="text" class="form-input" [ngModel]="diagnosedIcd10()" (ngModelChange)="diagnosedIcd10.set($event)" name="icd10" required />
             </div>
             
             <div class="form-group">
-              <label class="form-label">S - Subjective (อาการที่คนไข้บอกเล่า) <span style="color: var(--error);">*</span></label>
-              <textarea class="form-textarea" rows="2" [ngModel]="soapSubjective()" (ngModelChange)="soapSubjective.set($event)" name="subjective" required></textarea>
+              <label class="form-label">บันทึกอาการที่คนไข้บอกเล่า (Subjective) <span style="color: var(--error);">*</span></label>
+              <textarea class="form-textarea" rows="2" placeholder="ป้อนอาการหลักที่คนไข้เจ็บไข้ได้ป่วยบอกเล่าให้แพทย์ฟัง..." [ngModel]="soapSubjective()" (ngModelChange)="soapSubjective.set($event)" name="subjective" required></textarea>
             </div>
             
             <div class="form-group">
-              <label class="form-label">O - Objective (ผลการตรวจร่างกายแพทย์)</label>
-              <textarea class="form-textarea" rows="2" [ngModel]="soapObjective()" (ngModelChange)="soapObjective.set($event)" name="objective"></textarea>
+              <label class="form-label">บันทึกผลการตรวจร่างกายแพทย์ (Objective)</label>
+              <textarea class="form-textarea" rows="2" placeholder="บันทึกผลการใช้หูฟังสวน ตรวจคอ คออักเสบ บวม แดง..." [ngModel]="soapObjective()" (ngModelChange)="soapObjective.set($event)" name="objective"></textarea>
             </div>
             
             <div class="form-group">
-              <label class="form-label">A - Assessment (การประเมินและการวินิจฉัย) <span style="color: var(--error);">*</span></label>
-              <textarea class="form-textarea" rows="2" [ngModel]="soapAssessment()" (ngModelChange)="soapAssessment.set($event)" name="assessment" required></textarea>
+              <label class="form-label">ผลการประเมินและการวินิจฉัยโรค (Assessment) <span style="color: var(--error);">*</span></label>
+              <textarea class="form-textarea" rows="2" placeholder="ระบุประเภทการวินิจฉัยและวิเคราะห์โรค..." [ngModel]="soapAssessment()" (ngModelChange)="soapAssessment.set($event)" name="assessment" required></textarea>
             </div>
             
             <div class="form-group">
-              <label class="form-label">P - Plan (แผนการรักษา/คำสั่งแพทย์)</label>
-              <textarea class="form-textarea" rows="2" [ngModel]="soapPlan()" (ngModelChange)="soapPlan.set($event)" name="plan"></textarea>
+              <label class="form-label">คำแนะนำการรักษานอกเหนือการสั่งยา (Plan)</label>
+              <textarea class="form-textarea" rows="2" placeholder="เช่น แนะนำเช็ดตัวลดไข้ พักผ่อน งดดื่มของเย็น..." [ngModel]="soapPlan()" (ngModelChange)="soapPlan.set($event)" name="plan"></textarea>
             </div>
             
-            <!-- Prescription Panel -->
-            <div class="rx-box">
-              <h4 style="font-size: 15px; font-weight: 700; margin-bottom: 12px; color: var(--text-primary);">ใบสั่งสั่งจ่ายยาห้องยา (Rx Pharmacy Order)</h4>
+            <!-- Prescription Ordering with Clinical Safety Alerts inside -->
+            <div class="rx-box" style="border: 1px solid var(--border-color); overflow: visible;">
+              <h4 style="font-size: 15px; font-weight: 700; margin-bottom: 12px; color: var(--text-primary);">💊 สั่งยาจากสต็อกคลังจัดยา (Rx Order Terminal)</h4>
               
-              <div style="display: grid; grid-template-columns: 1.5fr 0.5fr; gap: 8px; margin-bottom: 8px;">
-                <div class="form-group" style="margin-bottom: 0;">
-                  <label class="form-label">เลือกตัวยาในคลังยา</label>
-                  <select class="form-select" [ngModel]="selectedDrugId()" (ngModelChange)="selectedDrugId.set($event)" name="selDrug">
-                    <option value="0">-- เลือกยาที่จะสั่งจ่าย --</option>
-                    @for (d of drugs(); track d.id) {
-                      <option [value]="d.id" [disabled]="d.stock_quantity <= 0">
-                        {{ d.name }} - ยอดคลัง: {{ d.stock_quantity }} ({{ d.price_per_unit }} บ./ชิ้น)
-                      </option>
+              <div style="display: grid; grid-template-columns: 1.5fr 0.5fr; gap: 8px; margin-bottom: 8px; overflow: visible;">
+                <div class="form-group" style="margin-bottom: 0; position: relative; overflow: visible;">
+                  <label class="form-label" style="font-size: 13px; font-weight: 600;">🔍 พิมพ์ค้นหาและตรวจสอบยา (Autocomplete & Safety)</label>
+                  <div style="position: relative; overflow: visible;">
+                    <input type="text" class="form-input" style="font-size: 14px; padding: 10px 12px;" 
+                           placeholder="พิมพ์ชื่อยาเพื่อค้นหา..." 
+                           [ngModel]="drugSearchQuery()" (ngModelChange)="onSearchQueryChange($event)" 
+                           (focus)="showSearchResults.set(true)" name="rxSearch" />
+                    
+                    @if (showSearchResults() && filteredDrugs().length > 0) {
+                      <div style="position: absolute; top: 100%; left: 0; right: 0; z-index: 1050; background: white; border: 1px solid var(--border-color); border-radius: var(--radius-md); box-shadow: var(--shadow-lg); max-height: 250px; overflow-y: auto; margin-top: 4px;">
+                        @for (d of filteredDrugs(); track d.id) {
+                          <div (click)="selectDrugFromSuggestion(d)" style="padding: 10px 12px; border-bottom: 1px solid #f1f5f9; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: background 0.15s;" onmouseover="this.style.backgroundColor='#f8fafc'" onmouseout="this.style.backgroundColor='white'">
+                            <div style="text-align: left;">
+                              <span style="font-weight: 600; font-size: 13.5px; color: var(--text-primary);">{{ d.name }}</span>
+                              <div style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">ตระกูล: {{ d.drug_family }} | เหลือ: {{ d.stock_quantity }} ชิ้น</div>
+                            </div>
+                            
+                            <!-- Premium Pre-guards (Safety Check Icons inside Suggestion) -->
+                            <div style="display: flex; gap: 4px; align-items: center; flex-shrink: 0;">
+                              @if (checkAllergyConflict(d)) {
+                                <span style="font-size: 10px; background: rgba(231, 76, 60, 0.1); color: var(--error); padding: 2px 6px; border-radius: 4px; font-weight: bold; border: 1px solid rgba(231, 76, 60, 0.2);">🚫 แพ้ยา</span>
+                              }
+                              @if (checkPregnancyConflict(d)) {
+                                <span style="font-size: 10px; background: rgba(230, 126, 34, 0.1); color: #d35400; padding: 2px 6px; border-radius: 4px; font-weight: bold; border: 1px solid rgba(230, 126, 34, 0.2);">🤰 เลี่ยงครรภ์</span>
+                              }
+                              @if (checkKidneyConflict(d)) {
+                                <span style="font-size: 10px; background: rgba(243, 156, 18, 0.1); color: #b7950b; padding: 2px 6px; border-radius: 4px; font-weight: bold; border: 1px solid rgba(243, 156, 18, 0.2);">⚠️ เลี่ยงโรคไต</span>
+                              }
+                              @if (checkLowStock(d)) {
+                                <span style="font-size: 10px; background: #fffbeb; color: #b45309; padding: 2px 6px; border-radius: 4px; font-weight: 500; border: 1px solid #fef3c7;">⚠️ สต็อกต่ำ</span>
+                              }
+                              @if (!checkAllergyConflict(d) && !checkPregnancyConflict(d) && !checkKidneyConflict(d)) {
+                                <span style="font-size: 10px; background: rgba(46, 204, 113, 0.1); color: var(--success); padding: 2px 6px; border-radius: 4px; font-weight: bold; border: 1px solid rgba(46, 204, 113, 0.2);">✔️ ปลอดภัย</span>
+                              }
+                            </div>
+                          </div>
+                        }
+                      </div>
+                    } @else if (showSearchResults() && drugSearchQuery().trim() !== '') {
+                      <div style="position: absolute; top: 100%; left: 0; right: 0; z-index: 1050; background: white; border: 1px solid var(--border-color); border-radius: var(--radius-md); box-shadow: var(--shadow-lg); padding: 12px; text-align: center; color: var(--text-secondary); font-size: 12.5px; margin-top: 4px;">
+                        ❌ ไม่พบยาคงคลังตามคำค้นหา
+                      </div>
                     }
-                  </select>
+                  </div>
                 </div>
                 
                 <div class="form-group" style="margin-bottom: 0;">
-                  <label class="form-label">จำนวน</label>
+                  <label class="form-label" style="font-size: 13px;">จำนวนสั่ง</label>
                   <input type="number" class="form-input" [ngModel]="selectedQty()" (ngModelChange)="selectedQty.set($event)" name="selQty" min="1" />
                 </div>
               </div>
               
               <div class="form-group">
-                <label class="form-label">วิธีใช้และขนาดรับประทาน (Instructions)</label>
-                <input type="text" class="form-input" [ngModel]="dosageInstructions()" (ngModelChange)="dosageInstructions.set($event)" name="selInstr" placeholder="เช่น ทานวันละ 1 ครั้ง หลังอาหาร" />
+                <label class="form-label" style="font-size: 13px;">วิธีใช้ยาและคำสั่งกินยา (Dosage Instructions)</label>
+                <input type="text" class="form-input" [ngModel]="dosageInstructions()" (ngModelChange)="dosageInstructions.set($event)" name="selInstr" placeholder="เช่น ทานครั้งละ 1 เม็ด เช้า-เย็น หลังอาหารทันที" />
               </div>
               
-              <button type="button" class="btn btn-secondary" style="width: 100%; font-size: 13.5px; border: 1.5px dashed var(--primary); color: var(--primary);" (click)="addDrugToRx()">
-                + เพิ่มตัวยานี้ในใบสั่งยา
+              <button type="button" class="btn btn-secondary" style="width: 100%; font-size: 13.5px; border: 1.5px dashed var(--primary); color: var(--primary); font-weight: 700;" (click)="addDrugToRx()">
+                + บันทึกจ่ายยารายการนี้ลงบิล
               </button>
               
-              <!-- Prescribed items listing -->
+              <!-- Prescribed items listing table -->
               <div style="margin-top: 16px;">
-                <h5 style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">รายการยาสั่งจ่ายแล้วในบิลตรวจนี้ ({{ prescribedItems().length }} รายการ):</h5>
+                <h5 style="font-size: 13px; font-weight: 700; margin-bottom: 8px; color: var(--text-primary);">ยาทั้งหมดที่สั่งจ่ายคนไข้รายนี้ ({{ prescribedItems().length }} รายการ):</h5>
                 
                 @if (prescribedItems().length === 0) {
-                  <p style="font-size: 13px; color: var(--text-secondary); text-align: center; padding: 12px 0;">ไม่มีการสั่งจ่ายยา (ตรวจรับคำแนะนำเพียงอย่างเดียว)</p>
+                  <p style="font-size: 13px; color: var(--text-secondary); text-align: center; padding: 12px 0;">ไม่มีการสั่งยาคิวนี้นะคะ (คนไข้ตรวจรับคำแนะนำเพียงอย่างเดียว)</p>
                 } @else {
                   @for (item of prescribedItems(); track item.drug_id) {
-                    <div class="rx-item">
+                    <div class="rx-item" style="box-shadow: var(--shadow-sm);">
                       <div style="font-size: 13.5px; flex: 1;">
-                        <div style="font-weight: 600;">{{ getDrugName(item.drug_id) }} x {{ item.quantity }} หน่วย</div>
-                        <div style="font-size: 12px; color: var(--text-secondary);">วิธีใช้: {{ item.dosage_instructions }}</div>
+                        <div style="font-weight: 600; color: var(--text-primary);">{{ getDrugName(item.drug_id) }}</div>
+                        <div style="font-size: 12px; color: var(--text-secondary);">ปริมาณสั่ง: {{ item.quantity }} ชิ้น | วิธีรับประทาน: {{ item.dosage_instructions }}</div>
                       </div>
-                      <button type="button" class="action-icon-btn delete" (click)="removeDrugFromRx(item.drug_id)" title="ลบยานี้">
+                      <button type="button" class="action-icon-btn delete" (click)="removeDrugFromRx(item.drug_id)" title="ลบยาสั่งจ่ายนี้">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                       </button>
                     </div>
@@ -225,10 +282,10 @@
             </div>
             
             <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
-              <button type="button" class="btn btn-secondary" (click)="closeConsultation()">ยกเลิก</button>
-              <button type="submit" class="btn btn-primary" style="background-color: var(--primary-hover);">
+              <button type="button" class="btn btn-secondary" (click)="closeConsultation()">ยกเลิกตรวจ</button>
+              <button type="submit" class="btn btn-primary" style="background-color: var(--primary-hover); font-weight: 700;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                <span>บันทึกการวินิจฉัยและส่งจ่ายคิวห้องยา</span>
+                <span>บันทึกความวินิจฉัยและส่งจ่ายห้องยา</span>
               </button>
             </div>
           </form>
@@ -237,3 +294,42 @@
     </div>
   }
 }
+
+<style>
+/* Blinking animation helpers for top UX alert blocks */
+.blinking-warning {
+  animation: blinkWarn 1.5s infinite;
+}
+.blinking-danger {
+  animation: blinkDanger 1.2s infinite;
+}
+.blinking-emergency {
+  animation: blinkEmergency 0.8s infinite;
+}
+.blinking-pulse {
+  animation: pulseQueue 1s infinite alternate;
+}
+
+@keyframes blinkWarn {
+  0% { box-shadow: 0 0 0 0px rgba(230, 126, 34, 0.4); }
+  70% { box-shadow: 0 0 0 6px rgba(230, 126, 34, 0); }
+  100% { box-shadow: 0 0 0 0px rgba(230, 126, 34, 0); }
+}
+
+@keyframes blinkDanger {
+  0% { box-shadow: 0 0 0 0px rgba(231, 76, 60, 0.4); }
+  70% { box-shadow: 0 0 0 6px rgba(231, 76, 60, 0); }
+  100% { box-shadow: 0 0 0 0px rgba(231, 76, 60, 0); }
+}
+
+@keyframes blinkEmergency {
+  0% { opacity: 0.3; }
+  50% { opacity: 1; }
+  100% { opacity: 0.3; }
+}
+
+@keyframes pulseQueue {
+  0% { transform: scale(0.96); box-shadow: 0 0 0 0px rgba(231, 76, 60, 0.6); }
+  100% { transform: scale(1.02); box-shadow: 0 0 0 6px rgba(231, 76, 60, 0); }
+}
+</style>

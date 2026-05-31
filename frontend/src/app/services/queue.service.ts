@@ -11,6 +11,7 @@ export interface QueueEntry {
   queue_number: string;
   status: 'Waiting_Vitals' | 'Waiting_Doctor' | 'Waiting_Pharmacy' | 'Waiting_Billing' | 'Discharged';
   doctor_id?: number | null;
+  triage_level?: 'Green' | 'Yellow' | 'Orange' | 'Red';
   current_station: string;
   created_at?: string;
   patient_name?: string;

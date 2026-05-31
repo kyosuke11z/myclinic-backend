@@ -1,14 +1,18 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { QueueService, QueueEntry } from '../../services/queue.service';
 import { EmrService, VitalSigns } from '../../services/emr.service';
 import { SyncService } from '../../services/sync.service';
 
+// Standalone shared tools for triage lists
+import { ThaiRelativeTimePipe } from '../../pipes/relative-time.pipe';
+
 @Component({
   selector: 'app-triage',
   standalone: true,
-  imports: [FormsModule],
-  templateUrl: './triage.html'
+  imports: [FormsModule, ThaiRelativeTimePipe],
+  templateUrl: './triage.html',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TriagePage implements OnInit {
   private queueService = inject(QueueService);
@@ -20,7 +24,7 @@ export class TriagePage implements OnInit {
   public isModalOpen = signal<boolean>(false);
   public activeQueue = signal<QueueEntry | null>(null);
 
-  // Vitals form state
+  // Vitals form state (includes default triage emergency level and creatinine)
   public vitalsForm = signal<Omit<VitalSigns, 'id'>>({
     patient_id: 0,
     weight: 60,
@@ -30,6 +34,8 @@ export class TriagePage implements OnInit {
     pulse: 75,
     temperature: 36.5,
     oxygen_saturation: 98,
+    triage_level: 'Green',
+    creatinine: 0.8,
     recorded_by: ''
   });
 
@@ -67,6 +73,8 @@ export class TriagePage implements OnInit {
       pulse: 75,
       temperature: 36.5,
       oxygen_saturation: 98,
+      triage_level: 'Green',
+      creatinine: 0.8,
       recorded_by: localStorage.getItem('userName') || 'Staff Nurse'
     });
     this.isModalOpen.set(true);

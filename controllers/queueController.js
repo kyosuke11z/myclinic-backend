@@ -1,16 +1,23 @@
 const db = require('../config/db');
 
-// Get all active clinic queues (not discharged)
+// Get all active clinic queues (not discharged) with dynamic priority sorting
 exports.getActiveQueues = async (req, res) => {
   try {
     const queryStr = `
-      SELECT q.*, p.name as patient_name, p.hn as patient_hn, p.gender, p.dob,
+      SELECT q.*, p.name as patient_name, p.hn as patient_hn, p.gender, p.dob, p.pregnancy_status,
              u.name as doctor_name
       FROM queues q
       JOIN patients p ON q.patient_id = p.id
       LEFT JOIN users u ON q.doctor_id = u.id
       WHERE q.status != 'Discharged'
-      ORDER BY q.created_at ASC
+      ORDER BY 
+        CASE q.triage_level
+          WHEN 'Red' THEN 1
+          WHEN 'Orange' THEN 2
+          WHEN 'Yellow' THEN 3
+          ELSE 4
+        END ASC, 
+        q.created_at ASC
     `;
     const rows = await db.query(queryStr);
     res.json(rows);
@@ -45,8 +52,8 @@ exports.createQueue = async (req, res) => {
 
     const result = await db.run(
       `INSERT INTO queues 
-       (patient_id, appointment_id, queue_number, status, doctor_id, current_station) 
-       VALUES (?, ?, ?, 'Waiting_Vitals', ?, 'จุดพยาบาลคัดกรองสัญญาณชีพ')`,
+       (patient_id, appointment_id, queue_number, status, doctor_id, triage_level, current_station) 
+       VALUES (?, ?, ?, 'Waiting_Vitals', ?, 'Green', 'รอซักประวัติแรกรับ')`,
       [patient_id, appointment_id || null, queueNum, doctor_id || null]
     );
 
@@ -71,7 +78,7 @@ exports.createQueue = async (req, res) => {
 exports.updateQueueStation = async (req, res) => {
   try {
     const queueId = req.params.id;
-    const { status, current_station, doctor_id } = req.body;
+    const { status, current_station, doctor_id, triage_level } = req.body;
 
     const fields = [];
     const params = [];
@@ -79,6 +86,7 @@ exports.updateQueueStation = async (req, res) => {
     if (status) { fields.push('status = ?'); params.push(status); }
     if (current_station) { fields.push('current_station = ?'); params.push(current_station); }
     if (doctor_id !== undefined) { fields.push('doctor_id = ?'); params.push(doctor_id); }
+    if (triage_level) { fields.push('triage_level = ?'); params.push(triage_level); }
 
     if (fields.length === 0) {
       return res.status(400).json({ message: 'No fields to update provided' });

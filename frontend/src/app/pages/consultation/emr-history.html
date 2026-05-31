@@ -1,0 +1,81 @@
+<!-- Vital Signs History -->
+<div class="card" style="margin-bottom: 20px; border-left: 6px solid var(--success); padding: 20px;">
+  <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 12px; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+    🩺 ประวัติชีพจรและร่างกายแรกรับ (Vitals Intake History)
+  </h3>
+  
+  <div class="history-card" style="max-height: 250px; overflow-y: auto; padding-right: 4px;">
+    @if (!history?.vitals || history?.vitals.length === 0) {
+      <p style="color: var(--text-secondary); text-align: center; padding: 20px 0; font-size: 13.5px;">ยังไม่มีบันทึกข้อมูลสัญญาณชีพใด ๆ</p>
+    } @else {
+      @for (v of history?.vitals; track v.id; let first = $first) {
+        <div style="padding: 12px; border-bottom: 1px solid var(--border-color); font-size: 13.5px; border-left: 4px solid var(--success); margin-bottom: 8px; border-radius: var(--radius-sm); background-color: #fafafa;"
+             [style.background-color]="first ? 'rgba(46, 204, 113, 0.04)' : '#fafafa'">
+          <div style="display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 6px;">
+            <span>บันทึกสัญญาณชีพ</span>
+            <span style="color: var(--text-secondary); font-size: 12px; font-weight: 500;">
+              {{ v.recorded_at | thaiRelativeTime }}
+            </span>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; color: var(--text-primary);">
+            <div>ความดัน: <strong>{{ v.bp_systolic }}/{{ v.bp_diastolic }} mmHg</strong></div>
+            <div>ชีพจร: <strong>{{ v.pulse }} ครั้ง/นาที</strong></div>
+            <div>อุณหภูมิไข้: <strong>{{ v.temperature }}°C</strong></div>
+            <div>ออกซิเจน: <strong>{{ v.oxygen_saturation }}%</strong></div>
+            <div>น้ำหนัก: {{ v.weight }} kg | ส่วนสูง: {{ v.height }} cm</div>
+            <div>ค่าไต (Creatinine): <strong [style.color]="v.creatinine > 1.5 ? 'var(--error)' : 'var(--text-primary)'">{{ v.creatinine }} mg/dL</strong></div>
+          </div>
+          
+          <div style="margin-top: 6px; display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed var(--border-color); padding-top: 6px;">
+            <span style="font-size: 11.5px; color: var(--text-secondary);">พยาบาลผู้จด: {{ v.recorded_by || 'ไม่ได้ระบุ' }}</span>
+            <span [appTriageColor]="v.triage_level">
+              {{ v.triage_level === 'Red' ? '🔴 วิกฤตแซงตรวจ' : v.triage_level === 'Orange' ? '🟠 เร่งด่วน' : v.triage_level === 'Yellow' ? '🟡 เฉียบพลัน' : '🟢 ปกติ' }}
+            </span>
+          </div>
+        </div>
+      }
+    }
+  </div>
+</div>
+
+<!-- Past Prescriptions History -->
+<div class="card" style="border-left: 6px solid var(--primary); padding: 20px;">
+  <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 12px; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+    📜 บันทึกอาการและใบสั่งยาครั้งก่อน (EMR Diagnostics History)
+  </h3>
+  
+  <div class="history-card" style="max-height: 350px; overflow-y: auto; padding-right: 4px;">
+    @if (!history?.prescriptions || history?.prescriptions.length === 0) {
+      <p style="color: var(--text-secondary); text-align: center; padding: 20px 0; font-size: 13.5px;">ยังไม่มีประวัติวินิจฉัยโรคในอดีต</p>
+    } @else {
+      @for (pr of history?.prescriptions; track pr.id) {
+        <div style="padding: 12px; border: 1px solid var(--border-color); border-radius: var(--radius-md); margin-bottom: 10px; background-color: #fafafa; border-left: 4px solid var(--primary);">
+          <div style="display: flex; justify-content: space-between; font-weight: 700; margin-bottom: 6px; border-bottom: 1px dashed var(--border-color); padding-bottom: 4px;">
+            <span style="color: var(--primary);">รหัสโรค (ICD-10): {{ pr.diagnosed_icd10 }}</span>
+            <span style="color: var(--text-secondary); font-size: 12px; font-weight: 500;">
+              {{ pr.created_at | thaiRelativeTime }}
+            </span>
+          </div>
+          
+          <div style="margin-top: 4px; font-size: 13px; color: var(--text-primary); line-height: 1.5;">
+            <strong>อาการประเมิน (S):</strong> {{ pr.soap_subjective }} <br/>
+            <strong>ผลการวินิจฉัย (A):</strong> {{ pr.soap_assessment }} <br/>
+            <strong>แผนการรักษาเพิ่มเติม (P):</strong> {{ pr.soap_plan }}
+          </div>
+          
+          @if (pr.items && pr.items.length > 0) {
+            <div style="margin-top: 8px; font-size: 12.5px; border-top: 1px dashed var(--border-color); padding-top: 6px; color: var(--text-secondary);">
+              <strong>ยาสั่งจ่ายในรอบนี้:</strong>
+              @for (item of pr.items; track item.id) {
+                <div style="padding-left: 8px; margin-top: 2px; color: var(--text-primary);">
+                  • {{ item.drug_name }} (จำนวน {{ item.quantity }} ชิ้น) 
+                  <span style="color: var(--text-secondary); font-size: 11.5px;">- {{ item.dosage_instructions }}</span>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+    }
+  </div>
+</div>

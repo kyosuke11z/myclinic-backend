@@ -104,18 +104,18 @@ export class SyncService {
 
     for (const action of queue) {
       try {
-        // Execute request synchronously
+        const token = localStorage.getItem('authToken');
+        const headers: Record<string, string> = token ? { 'Authorization': `Bearer ${token}` } : {};
+
         let req$: Observable<any>;
         if (action.method === 'POST') {
-          req$ = this.http.post(action.url, action.body);
+          req$ = this.http.post(action.url, action.body, { headers });
         } else if (action.method === 'PUT') {
-          req$ = this.http.put(action.url, action.body);
+          req$ = this.http.put(action.url, action.body, { headers });
         } else {
-          req$ = this.http.delete(action.url);
+          req$ = this.http.delete(action.url, { headers });
         }
 
-        // Attach authorization header if token exists
-        const token = localStorage.getItem('isAuthenticated'); // In a real app we'd use HttpInterceptor
         await firstValueFrom(req$);
         console.log(`[SyncService] Successfully synced: "${action.description}"`);
       } catch (err) {

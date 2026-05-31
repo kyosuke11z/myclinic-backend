@@ -1,13 +1,16 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { PharmacyService, DrugItem } from '../../services/pharmacy.service';
 import { SyncService } from '../../services/sync.service';
+import { DecimalPipe } from '@angular/common';
+import { ThaiRelativeTimePipe } from '../../pipes/relative-time.pipe';
 
 @Component({
   selector: 'app-dispensing',
   standalone: true,
-  imports: [FormsModule],
-  templateUrl: './dispensing.html'
+  imports: [FormsModule, DecimalPipe, ThaiRelativeTimePipe],
+  templateUrl: './dispensing.html',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DispensingPage implements OnInit {
   private pharmacyService = inject(PharmacyService);
@@ -27,6 +30,8 @@ export class DispensingPage implements OnInit {
     code: '',
     name: '',
     type: 'Tablet',
+    drug_family: 'General',
+    pregnancy_category: 'A',
     stock_quantity: 100,
     reorder_level: 20,
     expiry_date: '',
@@ -88,6 +93,8 @@ export class DispensingPage implements OnInit {
       code: `DRG${String(this.drugs().length + 1).padStart(3, '0')}`,
       name: '',
       type: 'Tablet',
+      drug_family: 'General',
+      pregnancy_category: 'A',
       stock_quantity: 100,
       reorder_level: 20,
       expiry_date: '2028-12-31',

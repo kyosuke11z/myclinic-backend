@@ -9,6 +9,8 @@ export interface DrugItem {
   code: string;
   name: string;
   type: 'Tablet' | 'Capsule' | 'Liquid' | 'Injection' | 'Cream';
+  drug_family: string;
+  pregnancy_category?: 'A' | 'B' | 'C' | 'D' | 'X';
   stock_quantity: number;
   reorder_level: number;
   expiry_date: string | null;
