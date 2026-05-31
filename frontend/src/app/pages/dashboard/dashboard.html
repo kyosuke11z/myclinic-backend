@@ -1,0 +1,122 @@
+<div class="dashboard-header">
+  <h1 class="dashboard-title">แดชบอร์ดภาพรวมคลินิก</h1>
+  <p class="dashboard-subtitle">แสดงข้อมูลสถิติและการนัดหมายล่าสุดของวันนี้</p>
+</div>
+
+@if (isLoading()) {
+  <div class="loader-container">
+    <div class="spinner"></div>
+    <p style="color: var(--text-secondary); font-weight: 500;">กำลังดาวน์โหลดข้อมูล...</p>
+  </div>
+} @else {
+  <!-- Stats Cards Grid -->
+  <div class="stats-grid">
+    <div class="stat-card stat-primary">
+      <div class="stat-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      </div>
+      <div class="stat-info">
+        <div class="stat-value">{{ totalPatients() }}</div>
+        <div class="stat-label">ผู้ป่วยลงทะเบียนทั้งหมด</div>
+      </div>
+    </div>
+    
+    <div class="stat-card stat-secondary">
+      <div class="stat-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      </div>
+      <div class="stat-info">
+        <div class="stat-value">{{ totalAppointments() }}</div>
+        <div class="stat-label">การนัดหมายรวมทั้งหมด</div>
+      </div>
+    </div>
+    
+    <div class="stat-card stat-success">
+      <div class="stat-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      </div>
+      <div class="stat-info">
+        <div class="stat-value">{{ completedAppointments() }}</div>
+        <div class="stat-label">การนัดหมายสำเร็จแล้ว</div>
+      </div>
+    </div>
+    
+    <div class="stat-card stat-error">
+      <div class="stat-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      </div>
+      <div class="stat-info">
+        <div class="stat-value">{{ pendingAppointments() }}</div>
+        <div class="stat-label">รอดำเนินการ (Pending)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Section Grid -->
+  <div class="sections-grid">
+    <!-- Left Section: Latest Appointments -->
+    <div class="section-card">
+      <div class="section-header">
+        <h2 class="section-title">นัดหมายล่าสุด 5 รายการ</h2>
+        <a routerLink="/appointments" class="btn btn-secondary" style="font-size: 13px; padding: 6px 12px;">ดูทั้งหมด</a>
+      </div>
+      
+      @if (latestAppointments().length === 0) {
+        <div style="text-align: center; padding: 40px 0; color: var(--text-secondary);">
+          <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color: #cbd5e1; margin-bottom: 8px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <p>ยังไม่มีประวัติการนัดหมายใด ๆ ในระบบ</p>
+        </div>
+      } @else {
+        <div class="table-container">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>ชื่อผู้ป่วย</th>
+                <th>วันที่</th>
+                <th>เวลา</th>
+                <th>สถานะ</th>
+                <th>สาเหตุ / อาการ</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (app of latestAppointments(); track app.id) {
+                <tr>
+                  <td style="font-weight: 600;">{{ app.patient_name }}</td>
+                  <td>{{ app.appointment_date }}</td>
+                  <td>{{ app.appointment_time }}</td>
+                  <td>
+                    <span class="badge" [class.badge-pending]="app.status === 'Pending'" [class.badge-completed]="app.status === 'Completed'" [class.badge-cancelled]="app.status === 'Cancelled'">
+                      {{ app.status }}
+                    </span>
+                  </td>
+                  <td style="color: var(--text-secondary); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    {{ app.reason || '-' }}
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+    
+    <!-- Right Section: Quick Actions -->
+    <div class="section-card" style="display: flex; flex-direction: column;">
+      <div class="section-header">
+        <h2 class="section-title">เมนูเข้าใช้งานด่วน</h2>
+      </div>
+      
+      <div class="quick-actions-list">
+        <a routerLink="/patients" class="action-item">
+          <svg class="action-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+          <span>จัดการข้อมูลผู้ป่วย (เพิ่ม/ลบ)</span>
+        </a>
+        
+        <a routerLink="/appointments" class="action-item">
+          <svg class="action-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <span>ลงทะเบียนคิวจัดนัดหมายใหม่</span>
+        </a>
+      </div>
+    </div>
+  </div>
+}
